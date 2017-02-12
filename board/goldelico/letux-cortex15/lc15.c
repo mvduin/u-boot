@@ -203,8 +203,8 @@ int board_mmc_init(bd_t *bis)
 	}
 
 	gpio_request(hard_select, "bootsel");		/* BOOTSEL button */
-	gpio_request(soft_select, "soft-select");	/* chooses uSD and not eMMC */
-	gpio_request(control, "mmc-control");		/* MMC switch control */
+	gpio_request(soft_select, "mmc-select");	/* chooses uSD and not eMMC */
+	gpio_request(control, "mmc-ownership");		/* MMC switch control */
 
 #if defined(CONFIG_SPL_BUILD)
 

@@ -186,9 +186,9 @@ static int get_pyra_mainboard_revision(void)
 	};
 
 	if (revision == -1) {
-		if (!gpio_request(160, "rev1") &&
-		    !gpio_request(182, "rev2") &&
-		    !gpio_request(185, "rev3")) {
+		if (!gpio_request(160, "mainboard-rev0") &&
+		    !gpio_request(182, "mainboard-rev1") &&
+		    !gpio_request(185, "mainboard-rev2")) {
 			gpio_direction_input(160);
 			gpio_direction_input(182);
 			gpio_direction_input(185);
