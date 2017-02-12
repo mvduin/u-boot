@@ -244,7 +244,7 @@ int board_init(void)
 	gpio_direction_output(144, 0);	/* reset all peripheral chips (incl. tca6424) */
 	udelay(1000);	/* 1ms should suffice */
 	gpio_direction_output(144, 1);
-	gpio_free(144);
+//	gpio_free(144);
 	udelay(5000);	/* 5ms should suffice */
 #endif
 

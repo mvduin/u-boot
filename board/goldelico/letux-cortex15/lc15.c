@@ -263,9 +263,9 @@ int board_mmc_init(bd_t *bis)
 
 #endif	/* defined(CONFIG_SPL_BUILD) */
 
-	gpio_free(hard_select);
-	gpio_free(soft_select);
-	gpio_free(control);
+//	gpio_free(hard_select);
+//	gpio_free(soft_select);
+//	gpio_free(control);
 
 	writel(0x02, 0x4A009120);	/* enable MMC3 module */
 	writel(0x02, 0x4A009128);	/* enable MMC4 module */

@@ -21,7 +21,9 @@
  * We typically do not contain NOR flash.  In the cases where we do, we
  * undefine this later.
  */
+#ifndef CONFIG_SYS_NO_FLASH
 #define CONFIG_SYS_NO_FLASH
+#endif
 
 /* Support both device trees and ATAGs. */
 #define CONFIG_CMDLINE_TAG

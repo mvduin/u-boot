@@ -296,6 +296,11 @@ dtb-$(CONFIG_SOC_KEYSTONE) += k2hk-evm.dtb \
 dtb-$(CONFIG_TARGET_SAMA5D2_XPLAINED) += \
 	at91-sama5d2_xplained.dtb
 
+dtb-$(CONFIG_TARGET_PYRA_LC15) +=			\
+	omap5-letux-cortex15-v5.0+pyra-v5.0.dtb		\
+	omap5-letux-cortex15-v5.1+pyra-v5.0.dtb		\
+	omap5-letux-cortex15-v5.1+pyra-v5.1.dtb
+
 targets += $(dtb-y)
 
 # Add any required device tree compiler flags here
