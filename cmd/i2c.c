@@ -134,7 +134,13 @@ static uchar i2c_no_probes[] = CONFIG_SYS_I2C_NOPROBES;
 #ifdef CONFIG_DM_I2C
 static struct udevice *i2c_cur_bus;
 
-static int cmd_i2c_set_bus_num(unsigned int busnum)
+static int cmd_i2c_set_no_bus(void)
+{
+	i2c_cur_bus = NULL;
+	return 0;
+}
+
+static int cmd_i2c_set_bus_num(int busnum)
 {
 	struct udevice *bus;
 	int ret;
@@ -162,12 +168,16 @@ static int i2c_get_cur_bus(struct udevice **busp)
 
 static int i2c_get_cur_bus_chip(uint chip_addr, struct udevice **devp)
 {
-	struct udevice *bus;
+	struct udevice *bus = i2c_cur_bus;
 	int ret;
 
-	ret = i2c_get_cur_bus(&bus);
-	if (ret)
-		return ret;
+	if (!bus) {
+		uint busnum = chip_addr >> 8;
+		chip_addr &= 0xff;
+		ret = uclass_get_device_by_seq(UCLASS_I2C, busnum, &bus);
+		if (ret)
+			return ret;
+	}
 
 	return i2c_get_chip(bus, chip_addr, 1, devp);
 }
@@ -1796,23 +1806,28 @@ static int do_i2c_bus_num(cmd_tbl_t *cmdtp, int flag, int argc,
 #ifdef CONFIG_DM_I2C
 		struct udevice *bus;
 
-		if (!i2c_get_cur_bus(&bus))
-			bus_no = bus->seq;
-		else
-			bus_no = -1;
+		if (i2c_get_cur_bus(&bus))
+			return 0;
+		bus_no = bus->seq;
 #else
 		bus_no = i2c_get_bus_num();
 #endif
-		printf("Current bus is %d\n", bus_no);
+		printf("Current I2C bus is %d\n", bus_no);
 	} else {
-		bus_no = simple_strtoul(argv[1], NULL, 10);
+		bus_no = simple_strtol(argv[1], NULL, 10);
 #if defined(CONFIG_SYS_I2C)
-		if (bus_no >= CONFIG_SYS_NUM_I2C_BUSES) {
-			printf("Invalid bus %d\n", bus_no);
+		if (bus_no < 0 || bus_no >= CONFIG_SYS_NUM_I2C_BUSES) {
+			printf("Invalid I2C bus %d\n", bus_no);
 			return -1;
 		}
 #endif
-		printf("Setting bus to %d\n", bus_no);
+#ifdef CONFIG_DM_I2C
+		if (bus_no < 0) {
+			puts("Deselecting I2C bus\n");
+			return cmd_i2c_set_no_bus();
+		}
+#endif
+		printf("Selecting I2C bus %d\n", bus_no);
 #ifdef CONFIG_DM_I2C
 		ret = cmd_i2c_set_bus_num(bus_no);
 #else
