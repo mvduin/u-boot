@@ -637,6 +637,7 @@ static void start_transfer(struct fsg_dev *fsg, struct usb_ep *ep,
 
 static void busy_indicator(void)
 {
+#ifdef CONFIG_F_MASS_STORAGE_NOISY
 	static int state;
 
 	switch (state) {
@@ -661,6 +662,7 @@ static void busy_indicator(void)
 	}
 	if (state++ == 8)
 		state = 0;
+#endif
 }
 
 static int sleep_thread(struct fsg_common *common)
