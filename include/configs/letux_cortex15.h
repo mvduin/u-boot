@@ -91,4 +91,5 @@
 #undef CONFIG_DM_SPI_FLASH
 #endif
 
+#define CONFIG_CMD_POWEROFF	1
 #endif /* __CONFIG_LETUX_CORTEX15_H */
