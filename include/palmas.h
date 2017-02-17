@@ -186,5 +186,6 @@ int palmas_mmc1_poweron_ldo(void);
 int twl603x_audio_power(u8 on);
 int twl603x_enable_bb_charge(u8 bb_fields);
 int palmas_enable_ss_ldo(void);
+int twl603x_poweroff(bool restart);
 
 #endif /* PALMAS_H */
