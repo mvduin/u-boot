@@ -9,4 +9,8 @@ config SYS_VENDOR
 config SYS_CONFIG_NAME
 	default "pandora_pyra_lc15"
 
+config DUAL_RANK_DDR3
+	bool "Dual-rank memory"
+	default y
+
 endif

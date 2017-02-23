@@ -137,6 +137,30 @@ const struct emif_regs emif_regs_ddr3_532_mhz_1cs_es2 = {
 	.emif_rd_wr_exec_thresh         = 0x40000305
 };
 
+const struct emif_regs emif_regs_ddr3_532_mhz_2cs_es2 = {
+	.sdram_config_init              = 0x61851B3A,
+	.sdram_config                   = 0x61851B3A,
+	.sdram_config2			= 0x0,
+	.ref_ctrl                       = 0x00001035,
+	.sdram_tim1                     = 0xCCCF36B3,
+	.sdram_tim2                     = 0x308F7FDA,
+	.sdram_tim3                     = 0x027F88A8,
+	.read_idle_ctrl                 = 0x00050000,
+	.zq_config                      = 0xD007190B,
+	.temp_alert_config              = 0x00000000,
+	.emif_ddr_phy_ctlr_1_init       = 0x0030400A,
+	.emif_ddr_phy_ctlr_1            = 0x0034400A,
+	.emif_ddr_ext_phy_ctrl_1        = 0x04040100,
+	.emif_ddr_ext_phy_ctrl_2        = 0x00000000,
+	.emif_ddr_ext_phy_ctrl_3        = 0x00000000,
+	.emif_ddr_ext_phy_ctrl_4        = 0x00000000,
+	.emif_ddr_ext_phy_ctrl_5        = 0x4350D435,
+	.emif_rd_wr_lvl_rmp_win         = 0x00000000,
+	.emif_rd_wr_lvl_rmp_ctl         = 0x80000000,
+	.emif_rd_wr_lvl_ctl             = 0x00000000,
+	.emif_rd_wr_exec_thresh         = 0x40000305
+};
+
 const struct dmm_lisa_map_regs lisa_map_4G_x_2_x_2 = {
 	.dmm_lisa_map_0 = 0x0,
 	.dmm_lisa_map_1 = 0x0,
@@ -147,6 +171,10 @@ const struct dmm_lisa_map_regs lisa_map_4G_x_2_x_2 = {
 
 static void emif_get_reg_dump_sdp(u32 emif_nr, const struct emif_regs **regs)
 {
+#ifdef CONFIG_DUAL_RANK_DDR3
+	*regs = &emif_regs_ddr3_532_mhz_2cs_es2;
+	return;
+#endif
 	switch (omap_revision()) {
 	case OMAP5430_ES1_0:
 		*regs = &emif_regs_532_mhz_2cs;
