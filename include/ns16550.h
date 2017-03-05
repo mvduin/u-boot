@@ -79,23 +79,38 @@ struct NS16550 {
 	UART_REG(msr);		/* 6 */
 	UART_REG(spr);		/* 7 */
 #if defined(CONFIG_NS16550_C6X)
-	UART_REG(reg8);		/* 8 */
-	UART_REG(reg9);		/* 9 */
+	UART_REG(dll);		/* 8 */
+	UART_REG(dlm);		/* 9 */
 	UART_REG(revid1);	/* A */
 	UART_REG(revid2);	/* B */
 	UART_REG(pwr_mgmt);	/* C */
 	UART_REG(mdr1);		/* D */
 #elif defined(CONFIG_NS16550_OMAP)
 	UART_REG(mdr1);		/* 8 */
-	UART_REG(reg9);		/* 9 */
+	UART_REG(mdr2);		/* 9 */
 	UART_REG(regA);		/* A */
 	UART_REG(regB);		/* B */
 	UART_REG(regC);		/* C */
 	UART_REG(regD);		/* D */
-	UART_REG(regE);		/* E */
-	UART_REG(uasr);		/* F */
+	UART_REG(uasr);		/* E */
+	UART_REG(regF);		/* F */
 	UART_REG(scr);		/* 10*/
 	UART_REG(ssr);		/* 11*/
+	UART_REG(reg12);	/* 12*/
+	UART_REG(reg13);	/* 13*/
+	UART_REG(mvr);		/* 14*/ /*32-bit value*/
+	UART_REG(sysc);		/* 15*/ /*32-bit value*/
+	UART_REG(syss);		/* 16*/ /*32-bit value*/
+	UART_REG(wer);		/* 17*/
+	UART_REG(reg18);	/* 18*/
+	UART_REG(rxfifo_lvl);	/* 19*/
+	UART_REG(txfifo_lvl);	/* 1a*/
+	UART_REG(ier2);		/* 1b*/
+	UART_REG(isr2);		/* 1c*/
+	UART_REG(freq_sel);	/* 1d*/
+	UART_REG(reg1e);	/* 1e*/
+	UART_REG(reg1f);	/* 1f*/
+	UART_REG(mdr3);		/* 20*/
 #endif
 #ifdef CONFIG_DM_SERIAL
 	struct ns16550_platdata *plat;
@@ -104,8 +119,10 @@ struct NS16550 {
 
 #define thr rbr
 #define iir fcr
+#ifndef CONFIG_NS16550_C6X
 #define dll rbr
 #define dlm ier
+#endif
 
 typedef struct NS16550 *NS16550_t;
 

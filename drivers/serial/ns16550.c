@@ -139,62 +139,113 @@ int ns16550_calc_divisor(NS16550_t port, int clock, int baudrate)
 
 static void NS16550_setbrg(NS16550_t com_port, int baud_divisor)
 {
+#ifndef CONFIG_NS16550_C6X
 	serial_out(UART_LCR_BKSE | UART_LCRVAL, &com_port->lcr);
+#endif
 	serial_out(baud_divisor & 0xff, &com_port->dll);
 	serial_out((baud_divisor >> 8) & 0xff, &com_port->dlm);
 	serial_out(UART_LCRVAL, &com_port->lcr);
 }
 
-void NS16550_init(NS16550_t com_port, int baud_divisor)
+static void NS16550_drain(NS16550_t com_port)
 {
-#if (defined(CONFIG_SPL_BUILD) && \
-		(defined(CONFIG_OMAP34XX) || defined(CONFIG_OMAP44XX)))
-	/*
-	 * On some OMAP3/OMAP4 devices when UART3 is configured for boot mode
-	 * before SPL starts only THRE bit is set. We have to empty the
-	 * transmitter before initialization starts.
-	 */
-	if ((serial_in(&com_port->lsr) & (UART_LSR_TEMT | UART_LSR_THRE))
-	     == UART_LSR_THRE) {
-		if (baud_divisor != -1)
-			NS16550_setbrg(com_port, baud_divisor);
-		serial_out(0, &com_port->mdr1);
-	}
-#endif
-
 	while (!(serial_in(&com_port->lsr) & UART_LSR_TEMT))
 		;
+}
 
-	serial_out(CONFIG_SYS_NS16550_IER, &com_port->ier);
 #ifdef CONFIG_NS16550_OMAP
-	serial_out(0x7, &com_port->mdr1);	/* mode select reset TL16C750*/
+#define efr fcr
+#define xon1 mcr
+#define xon2 lsr
+#define xoff1 msr
+#define xoff2 spr
+#define tcr msr
+#define tlr spr
+void NS16550_init(NS16550_t com_port, int baud_divisor)
+{
+	/*
+ 	 * Don't try to drain the tx fifo if uart is not enabled, since that
+ 	 * will hang if it's non-empty.  On some OMAP3/OMAP4 devices boot ROM
+ 	 * may leave the uart in such a state.
+	 */
+	if (serial_in(&com_port->mdr1) != 7) {
+		NS16550_drain(com_port);
+		serial_out(7, &com_port->mdr1);  /* disable uart */
+	}
+
+	if (baud_divisor == -1) {
+		serial_out(0xbf, &com_port->lcr);  /* config mode */
+		baud_divisor = serial_in(&com_port->dll) |
+				serial_in(&com_port->dlm) << 8;
+	}
+
+	serial_out(0x2, &com_port->sysc);  /* reset module */
+	while(!(serial_in(&com_port->syss) & 1))
+		;
+	serial_out(0x11, &com_port->sysc);  /* default pm */
+
+	serial_out(0xbf, &com_port->lcr);  /* config mode */
+#ifdef CONFIG_SERIAL_HW_FLOW_CONTROL
+	serial_out(0x70, &com_port->efr);
+#else
+	serial_out(0x38, &com_port->efr);
+	serial_out('S' & 0x1f, &com_port->xoff1);
+	serial_out('Q' & 0x1f, &com_port->xon1);
 #endif
+	serial_out('C' & 0x1f, &com_port->xoff2);  /* event char = ^C */
+
+	/* frame format */
+	serial_out(baud_divisor & 0xff, &com_port->dll);
+	serial_out((baud_divisor >> 8) & 0xff, &com_port->dlm);
+	serial_out(UART_LCRVAL, &com_port->lcr);
+
+	/* fifo config */
+//	serial_out(0x60, &com_port->mcr);
+//	serial_out((16/4) << 4 | (40/4), &com_port->tcr);
+	serial_out(UART_FCRVAL, &com_port->fcr);
+
+	/* enable uart, with workaround for erratum i202 */
+	serial_out(0, &com_port->mdr1);
+	__udelay(1);
+	serial_out(UART_FCRVAL, &com_port->fcr);
+	serial_out(UART_MCRVAL, &com_port->mcr);
+
+	if (CONFIG_SYS_NS16550_IER)
+		serial_out(CONFIG_SYS_NS16550_IER, &com_port->ier);
+}
+
+#else /* !CONFIG_NS16550_OMAP */
+
+void NS16550_init(NS16550_t com_port, int baud_divisor)
+{
+	NS16550_drain(com_port);
+
 	serial_out(UART_MCRVAL, &com_port->mcr);
 	serial_out(UART_FCRVAL, &com_port->fcr);
 	if (baud_divisor != -1)
 		NS16550_setbrg(com_port, baud_divisor);
-#if defined(CONFIG_NS16550_OMAP) || defined(CONFIG_NS16550_C6X)
+#ifdef CONFIG_NS16550_C6X
 	/* /16 is proper to hit 115200 with 48MHz */
 	serial_out(0, &com_port->mdr1);
+	serial_out(UART_REG_VAL_PWREMU_MGMT_UART_ENABLE, &com_port->pwr_mgmt);
 #endif
-#ifdef CONFIG_NS16550_OMAP
-	/* apply workaround for erratum i202 */
-	__udelay(1);
-	serial_out(UART_FCRVAL, &com_port->fcr);
-#endif
-#ifdef CONFIG_NS16550_C6X
-	serial_out(UART_REG_VAL_PWREMU_MGMT_UART_ENABLE, &com_port->regC);
-#endif
+	serial_out(CONFIG_SYS_NS16550_IER, &com_port->ier);
 }
+
+#endif /* CONFIG_NS16550_OMAP */
 
 #ifndef CONFIG_NS16550_MIN_FUNCTIONS
 void NS16550_reinit(NS16550_t com_port, int baud_divisor)
 {
+#if 0
 	serial_out(CONFIG_SYS_NS16550_IER, &com_port->ier);
 	NS16550_setbrg(com_port, 0);
 	serial_out(UART_MCRVAL, &com_port->mcr);
 	serial_out(UART_FCRVAL, &com_port->fcr);
 	NS16550_setbrg(com_port, baud_divisor);
+#else
+	NS16550_init(com_port, baud_divisor);
+#endif
 }
 #endif /* CONFIG_NS16550_MIN_FUNCTIONS */
 
@@ -210,8 +261,10 @@ void NS16550_putc(NS16550_t com_port, char c)
 	 * environment upon "printenv". So we can't put this watchdog call
 	 * in puts().
 	 */
-	if (c == '\n')
+	if (c == '\n') {
+		NS16550_drain(com_port);
 		WATCHDOG_RESET();
+	}
 }
 
 #ifndef CONFIG_NS16550_MIN_FUNCTIONS
