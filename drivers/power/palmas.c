@@ -53,68 +53,19 @@ void palmas_init_settings(void)
 
 int palmas_mmc1_poweron_ldo(void)
 {
-	u8 val = 0;
-
 #if defined(CONFIG_DRA7XX) || defined(CONFIG_AM57XX)
 	/*
 	 * Currently valid for the dra7xx_evm board:
 	 * Set TPS659038 LDO1 to 3.0 V
 	 */
-	val = LDO_VOLT_3V0;
-	if (palmas_i2c_write_u8(TPS65903X_CHIP_P1, LDO1_VOLTAGE, val)) {
-		printf("tps65903x: could not set LDO1 voltage.\n");
-		return 1;
-	}
-	/* TURN ON LDO1 */
-	val = RSC_MODE_SLEEP | RSC_MODE_ACTIVE;
-	if (palmas_i2c_write_u8(TPS65903X_CHIP_P1, LDO1_CTRL, val)) {
-		printf("tps65903x: could not turn on LDO1.\n");
-		return 1;
-	}
-	return 0;
+	return palmas_config_ldo(1, LDO_VOLT_3V0);
 #else
 	/*
 	 * We assume that this is a OMAP543X + TWL603X board:
 	 * Set TWL6035/37 LDO9 to 3.0 V
 	 */
-	val = LDO_VOLT_3V0;
-	return twl603x_mmc1_set_ldo9(val);
+	return palmas_config_ldo(9, LDO_VOLT_3V0);
 #endif
-}
-
-/*
- * On some OMAP5 + TWL603X hardware the SD card socket and LDO9_IN are
- * powered by an external 3.3 V regulator, while the output of LDO9
- * supplies VDDS_SDCARD for the OMAP5 interface only. This implies that
- * LDO9 could be set to 'bypass' mode when required (e.g. for 3.3 V cards).
- */
-int twl603x_mmc1_set_ldo9(u8 vsel)
-{
-	u8 cval = 0, vval = 0;	/* Off by default */
-	int err;
-
-	if (vsel) {
-		/* Turn on */
-		if (vsel > LDO_VOLT_3V3) {
-			/* Put LDO9 in bypass */
-			cval = LDO9_BYP_EN | RSC_MODE_SLEEP | RSC_MODE_ACTIVE;
-			vval = LDO_VOLT_3V3;
-		} else {
-			cval = RSC_MODE_SLEEP | RSC_MODE_ACTIVE;
-			vval = vsel & 0x3f;
-		}
-	}
-	err = palmas_i2c_write_u8(TWL603X_CHIP_P1, LDO9_VOLTAGE, vval);
-	if (err) {
-		printf("twl603x: could not set LDO9 %s: err = %d\n",
-		       vsel > LDO_VOLT_3V3 ? "bypass" : "voltage", err);
-		return err;
-	}
-	err = palmas_i2c_write_u8(TWL603X_CHIP_P1, LDO9_CTRL, cval);
-	if (err)
-		printf("twl603x: could not turn %s LDO9: err = %d\n",
-		       cval ? "on" : "off", err);
-	return err;
 }
 
 #ifdef CONFIG_PALMAS_AUDPWR

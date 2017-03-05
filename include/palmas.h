@@ -180,7 +180,6 @@ int palmas_config_ldo(int ldo, u8 config);
 
 void palmas_init_settings(void);
 int palmas_mmc1_poweron_ldo(void);
-int twl603x_mmc1_set_ldo9(u8 vsel);
 int twl603x_audio_power(u8 on);
 int twl603x_enable_bb_charge(u8 bb_fields);
 int palmas_enable_ss_ldo(void);
