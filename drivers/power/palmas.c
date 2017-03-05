@@ -7,6 +7,34 @@
 #include <config.h>
 #include <palmas.h>
 
+static const char *const ldo_names[12] = {
+	"LDO1", "LDO2", "LDO3", "LDO4",
+	"LDO5", "LDO6", "LDO7", "LDO8",
+	"LDO9", "LDOLN", "LDOUSB", "LDOVANA",
+};
+
+int palmas_config_ldo(int ldo, u8 config)
+{
+	int err;
+	u8 buf[2];
+	buf[0] = config & 0xc0;  /* ldo flags */
+	buf[1] = config & 0x3f;  /* voltage */
+	if (buf[1] != 0)
+		buf[0] |= RSC_MODE_SLEEP | RSC_MODE_ACTIVE;
+
+	/* can't config LDOVANA */
+	if (ldo < 1 || ldo >= 12) {
+		printf("palmas_config_ldo: invalid ldo index %d\n", ldo);
+		return 1;
+	}
+	--ldo;
+	err = palmas_write(0x50 + 2 * ldo, buf, 2);
+	if (err)
+		printf("palmas: could not configure %s (ctrl=0x%x, "
+				"vsel=%d)\n", ldo_names[ldo], buf[0], buf[1]);
+	return err;
+}
+
 void palmas_init_settings(void)
 {
 #ifdef CONFIG_PALMAS_SMPS7_FPWM

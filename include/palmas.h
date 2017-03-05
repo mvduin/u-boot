@@ -176,6 +176,8 @@ static inline int palmas_i2c_read_u8(u8 chip_no, u8 reg, u8 *val)
 	return palmas_read_u8(reg, val);
 }
 
+int palmas_config_ldo(int ldo, u8 config);
+
 void palmas_init_settings(void);
 int palmas_mmc1_poweron_ldo(void);
 int twl603x_mmc1_set_ldo9(u8 vsel);
