@@ -18,6 +18,9 @@
 #include <asm/utils.h>
 #include <linux/compiler.h>
 
+#undef debug
+#define debug printf
+
 static int emif1_enabled = -1, emif2_enabled = -1;
 
 void set_lpmode_selfrefresh(u32 base)
@@ -33,6 +36,10 @@ void set_lpmode_selfrefresh(u32 base)
 
 	/* dummy read for the new SR_TIM to be loaded */
 	readl(&emif->emif_pwr_mgmt_ctrl);
+
+	// XXX according to TRM, at least one sdram access is needed to ensure
+	// change takes effect.  slightly annoying to locate a suitable address
+	// to use for EMIF2
 }
 
 void force_emif_self_refresh()
@@ -86,6 +93,8 @@ void emif_reset_phy(u32 base)
 {
 	struct emif_reg_struct *emif = (struct emif_reg_struct *)base;
 	u32 iodft;
+
+	debug("emif_reset_phy(0x%x)\n", base);
 
 	iodft = readl(&emif->emif_iodft_tlgc);
 	iodft |= EMIF_REG_RESET_PHY_MASK;
@@ -202,6 +211,8 @@ static void omap5_ddr3_leveling(u32 base, const struct emif_regs *regs)
 {
 	struct emif_reg_struct *emif = (struct emif_reg_struct *)base;
 
+	debug("omap5_ddr3_leveling(0x%x)\n", base);
+
 	/* keep sdram in self-refresh */
 	writel(((LP_MODE_SELF_REFRESH << EMIF_REG_LP_MODE_SHIFT)
 		& EMIF_REG_LP_MODE_MASK), &emif->emif_pwr_mgmt_ctrl);
@@ -230,7 +241,7 @@ static void omap5_ddr3_leveling(u32 base, const struct emif_regs *regs)
 
 	/* Wait till full leveling is complete */
 	readl(&emif->emif_rd_wr_lvl_ctl);
-	      __udelay(130);
+	__udelay(130);
 
 	/* Read data eye leveling no of samples */
 	config_data_eye_leveling_samples(base);
@@ -246,7 +257,16 @@ static void omap5_ddr3_leveling(u32 base, const struct emif_regs *regs)
 
 	/* Launch Incremental leveling */
 	writel(DDR3_INC_LVL, &emif->emif_rd_wr_lvl_ctl);
-	       __udelay(130);
+	__udelay(130);
+
+	{
+		u32 *status = emif->emif_ddr_phy_status;
+		int i;
+		debug("emif status: %x\nphy status:", emif->emif_status);
+		for(i = 0; i < 21; i++)
+			debug(" %x", readl(status++));
+		debug("\n");
+	}
 }
 
 static void update_hwleveling_output(u32 base, const struct emif_regs *regs)
@@ -1470,12 +1490,12 @@ void sdram_init(void)
 						size_prog);
 		/* Compare with the size programmed */
 		if (size_detect != size_prog) {
-			printf("SDRAM: identified size not same as expected"
-				" size identified: %x expected: %x\n",
-				size_detect,
-				size_prog);
+			extern int twl603x_poweroff(bool restart);
+			printf("### SDRAM: identified: %x expected: %x ###\n",
+				size_detect, size_prog);
+			twl603x_poweroff(false);
 		} else
-			debug("get_ram_size() successful");
+			debug("get_ram_size() successful\n");
 	}
 
 #if defined(CONFIG_TI_SECURE_DEVICE)
