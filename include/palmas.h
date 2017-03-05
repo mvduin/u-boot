@@ -47,18 +47,29 @@
  * Bit field definitions for LDOx_CTRL, SYSENx_CTRL
  * and some other xxx_CTRL resources:
  */
-#define LDO9_BYP_EN		(1 << 6)	/* LDO9 only! */
 #define RSC_STAT_ON		(1 << 4)	/* RO status bit! */
 #define RSC_MODE_SLEEP		(1 << 2)
 #define RSC_MODE_ACTIVE		(1 << 0)
 
+/* LDO flags */
+#define LDO_PERSIST		(1 << 7)	/* warm-reset insensitive */
+#define LDO6_VIB_EN		(1 << 6)	/* LDO6: config for vibrator */
+#define LDO8_TRACKING_EN	(1 << 6)	/* LDO8: tracking.. (what?) */
+#define LDO9_BYP_EN		(1 << 6)	/* LDO9: bypass mode */
+
 /* Some LDO voltage values */
 #define LDO_VOLT_OFF		0
+#define LDO_VOLT_0V9		0x01
+#define LDO_VOLT_1V2		0x07
+#define LDO_VOLT_1V5		0x0d
 #define LDO_VOLT_1V8		0x13
+#define LDO_VOLT_2V0		0x17
+#define LDO_VOLT_2V8		0x27
 #define LDO_VOLT_3V0		0x2b
+#define LDO_VOLT_3V25		0x30
 #define LDO_VOLT_3V3		0x31
 /* Request bypass, LDO9 only */
-#define LDO9_BYPASS		0x3f
+#define LDO9_BYPASS		(LDO_VOLT_3V3 | LDO9_BYP_EN)
 
 /* SMPS7_CTRL */
 #define SMPS7_CTRL		0x30
