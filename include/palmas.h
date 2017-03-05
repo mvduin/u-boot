@@ -109,28 +109,60 @@
 #define CONFIG_SYS_I2C_PALMAS_BUS_NUM	(0)
 #endif
 
+#ifndef CONFIG_SYS_I2C_PALMAS_ADDR
+#if defined(CONFIG_DRA7XX) || defined(CONFIG_AM57XX)
+#define CONFIG_SYS_I2C_PALMAS_ADDR	TPS65903X_CHIP_P1
+#else
+#define CONFIG_SYS_I2C_PALMAS_ADDR	TWL603X_CHIP_P1
+#endif
+#endif
+
+
 /*
  * Functions to read and write from TPS659038/TWL6035/TWL6037
  * or other Palmas family of TI PMICs
  */
-static inline int palmas_i2c_write_u8(u8 chip_no, u8 reg, u8 val)
+static inline int palmas_write(u8 reg, u8 *buf, int len)
 {
 	int saved_bus = i2c_get_bus_num();
 	int ret = i2c_set_bus_num(CONFIG_SYS_I2C_PALMAS_BUS_NUM);
 	if (!ret)
-		ret = i2c_write(chip_no, reg, 1, &val, 1);
+		ret = i2c_write(CONFIG_SYS_I2C_PALMAS_ADDR, reg, 1, buf, len);
 	i2c_set_bus_num(saved_bus);
 	return ret;
 }
 
-static inline int palmas_i2c_read_u8(u8 chip_no, u8 reg, u8 *val)
+static inline int palmas_read(u8 reg, u8 *buf, int len)
 {
 	int saved_bus = i2c_get_bus_num();
 	int ret = i2c_set_bus_num(CONFIG_SYS_I2C_PALMAS_BUS_NUM);
 	if (!ret)
-		ret = i2c_read(chip_no, reg, 1, val, 1);
+		ret = i2c_read(CONFIG_SYS_I2C_PALMAS_ADDR, reg, 1, buf, len);
 	i2c_set_bus_num(saved_bus);
 	return ret;
+}
+
+static inline int palmas_write_u8(u8 reg, u8 val)
+{
+	return palmas_write(reg, &val, 1);
+}
+static inline int palmas_read_u8(u8 reg, u8 *val)
+{
+	return palmas_read(reg, val, 1);
+}
+
+/* for backwards compatibility */
+static inline int palmas_i2c_write_u8(u8 chip_no, u8 reg, u8 val)
+{
+	if (chip_no != CONFIG_SYS_I2C_PALMAS_ADDR)
+		return -ENODEV;
+	return palmas_write_u8(reg, val);
+}
+static inline int palmas_i2c_read_u8(u8 chip_no, u8 reg, u8 *val)
+{
+	if (chip_no != CONFIG_SYS_I2C_PALMAS_ADDR)
+		return -ENODEV;
+	return palmas_read_u8(reg, val);
 }
 
 void palmas_init_settings(void);
