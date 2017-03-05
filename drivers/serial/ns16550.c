@@ -40,7 +40,7 @@ DECLARE_GLOBAL_DATA_PTR;
 #endif
 #endif /* !CONFIG_DM_SERIAL */
 
-#if defined(CONFIG_SOC_KEYSTONE)
+#ifdef CONFIG_NS16550_C6X
 #define UART_REG_VAL_PWREMU_MGMT_UART_DISABLE   0
 #define UART_REG_VAL_PWREMU_MGMT_UART_ENABLE ((1 << 14) | (1 << 13) | (1 << 0))
 #undef UART_MCRVAL
@@ -166,22 +166,18 @@ void NS16550_init(NS16550_t com_port, int baud_divisor)
 		;
 
 	serial_out(CONFIG_SYS_NS16550_IER, &com_port->ier);
-#if defined(CONFIG_OMAP) || defined(CONFIG_AM33XX) || \
-			defined(CONFIG_TI81XX) || defined(CONFIG_AM43XX)
+#ifdef CONFIG_NS16550_OMAP
 	serial_out(0x7, &com_port->mdr1);	/* mode select reset TL16C750*/
 #endif
 	serial_out(UART_MCRVAL, &com_port->mcr);
 	serial_out(UART_FCRVAL, &com_port->fcr);
 	if (baud_divisor != -1)
 		NS16550_setbrg(com_port, baud_divisor);
-#if defined(CONFIG_OMAP) || \
-	defined(CONFIG_AM33XX) || defined(CONFIG_SOC_DA8XX) || \
-	defined(CONFIG_TI81XX) || defined(CONFIG_AM43XX)
-
+#if defined(CONFIG_NS16550_OMAP) || defined(CONFIG_NS16550_C6X)
 	/* /16 is proper to hit 115200 with 48MHz */
 	serial_out(0, &com_port->mdr1);
-#endif /* CONFIG_OMAP */
-#if defined(CONFIG_SOC_KEYSTONE)
+#endif
+#ifdef CONFIG_NS16550_C6X
 	serial_out(UART_REG_VAL_PWREMU_MGMT_UART_ENABLE, &com_port->regC);
 #endif
 }

@@ -45,6 +45,14 @@
 	unsigned char postpad_##x[-CONFIG_SYS_NS16550_REG_SIZE - 1];
 #endif
 
+/* Identify major device variants */
+#if defined(CONFIG_SOC_KEYSTONE) || defined(CONFIG_SOC_DA8XX)
+#define CONFIG_NS16550_C6X 1
+#elif defined(CONFIG_OMAP) || defined(CONFIG_AM33XX) || \
+			defined(CONFIG_TI81XX) || defined(CONFIG_AM43XX)
+#define CONFIG_NS16550_OMAP 1
+#endif
+
 /**
  * struct ns16550_platdata - information about a NS16550 port
  *
@@ -70,14 +78,14 @@ struct NS16550 {
 	UART_REG(lsr);		/* 5 */
 	UART_REG(msr);		/* 6 */
 	UART_REG(spr);		/* 7 */
-#ifdef CONFIG_SOC_DA8XX
+#if defined(CONFIG_NS16550_C6X)
 	UART_REG(reg8);		/* 8 */
 	UART_REG(reg9);		/* 9 */
 	UART_REG(revid1);	/* A */
 	UART_REG(revid2);	/* B */
 	UART_REG(pwr_mgmt);	/* C */
 	UART_REG(mdr1);		/* D */
-#else
+#elif defined(CONFIG_NS16550_OMAP)
 	UART_REG(mdr1);		/* 8 */
 	UART_REG(reg9);		/* 9 */
 	UART_REG(regA);		/* A */
