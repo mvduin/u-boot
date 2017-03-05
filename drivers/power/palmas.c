@@ -44,7 +44,7 @@ void palmas_init_settings(void)
 	 * forced PWM mode. This reduces noise (but affects efficiency).
 	 */
 	u8 val = SMPS_MODE_SLP_FPWM | SMPS_MODE_ACT_FPWM;
-	err = palmas_i2c_write_u8(TWL603X_CHIP_P1, SMPS7_CTRL, val);
+	err = palmas_write_u8(SMPS7_CTRL, val);
 	if (err)
 		printf("palmas: could not force PWM for SMPS7: err = %d\n",
 		       err);
@@ -84,21 +84,21 @@ int twl603x_audio_power(u8 on)
 		c32k = RSC_MODE_SLEEP | RSC_MODE_ACTIVE;
 	}
 	/* Set SMPS9 to 2.1 V (for TWL604x), or to 0 (off) */
-	err = palmas_i2c_write_u8(TWL603X_CHIP_P1, SMPS9_VOLTAGE, vval);
+	err = palmas_write_u8(SMPS9_VOLTAGE, vval);
 	if (err) {
 		printf("twl603x: could not set SMPS9 voltage: err = %d\n",
 		       err);
 		return err;
 	}
 	/* Turn on or off SMPS9 */
-	err = palmas_i2c_write_u8(TWL603X_CHIP_P1, SMPS9_CTRL, cval);
+	err = palmas_write_u8(SMPS9_CTRL, cval);
 	if (err) {
 		printf("twl603x: could not turn SMPS9 %s: err = %d\n",
 		       cval ? "on" : "off", err);
 		return err;
 	}
 	/* Output 32 kHz clock on or off */
-	err = palmas_i2c_write_u8(TWL603X_CHIP_P1, CLK32KGAUDIO_CTRL, c32k);
+	err = palmas_write_u8(CLK32KGAUDIO_CTRL, c32k);
 	if (err)
 		printf("twl603x: could not turn CLK32KGAUDIO %s: err = %d\n",
 		       c32k ? "on" : "off", err);
@@ -116,7 +116,7 @@ int twl603x_audio_power(u8 on)
 int palmas_enable_ss_ldo(void)
 {
 	/* Enable smps10 regulator  */
-	return palmas_i2c_write_u8(TWL603X_CHIP_P1, SMPS10_CTRL,
+	return palmas_write_u8(SMPS10_CTRL,
 				SMPS10_MODE_ACTIVE_D);
 }
 #endif
@@ -131,7 +131,7 @@ int twl603x_enable_bb_charge(u8 bb_fields)
 	int err;
 
 	val |= (VRTC_EN_SLP | VRTC_EN_OFF | VRTC_PWEN);
-	err = palmas_i2c_write_u8(TWL603X_CHIP_P1, BB_VRTC_CTRL, val);
+	err = palmas_write_u8(BB_VRTC_CTRL, val);
 	if (err)
 		printf("twl603x: could not set BB_VRTC_CTRL to 0x%02x: err = %d\n",
 		       val, err);

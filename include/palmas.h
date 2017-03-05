@@ -37,6 +37,9 @@
 #define LDOUSB_VOLTAGE		0x65
 #define LDO_CTRL		0x6a
 
+/* Device power control: 0=off, 1=on, 3=reboot */
+#define DEV_CTRL		0xa0
+
 /* Control of 32 kHz audio clock */
 #define CLK32KGAUDIO_CTRL	0xd5
 

@@ -385,7 +385,7 @@ int board_late_init(void)
 	 * DEV_CTRL.DEV_ON = 1 please - else palmas switches off in 8 seconds
 	 * This is the POWERHOLD-in-Low behavior.
 	 */
-	palmas_i2c_write_u8(TPS65903X_CHIP_P1, 0xA0, 0x1);
+	palmas_write_u8(DEV_CTRL, 0x1);
 	return 0;
 }
 
