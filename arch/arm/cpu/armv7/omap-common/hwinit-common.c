@@ -159,8 +159,8 @@ void early_system_init(void)
 	setup_early_clocks();
 #ifdef CONFIG_SPL_BUILD
 	/* a hack to get the console early */
-	asm volatile("ldr r0,=preloader_console_init; blx r0"
-		::: "r0", "r1", "r2", "r3", "lr", "memory");
+	extern void preloader_console_init(void);
+	preloader_console_init();
 #endif
 	do_board_detect();
 	vcores_init();
