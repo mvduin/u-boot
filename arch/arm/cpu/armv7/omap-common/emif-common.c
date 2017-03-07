@@ -207,6 +207,158 @@ void emif_update_timings(u32 base, const struct emif_regs *regs)
 }
 
 #ifndef CONFIG_OMAP44XX
+static void omap5_ddr3_phy_clearerr(struct emif_reg_struct *emif)
+{
+	u32 x = readl(&emif->emif_ddr_ext_phy_ctrl_24);
+	writel( x |= 0x700, &emif->emif_ddr_ext_phy_ctrl_24 );
+	writel( x &= ~0x700, &emif->emif_ddr_ext_phy_ctrl_24 );
+}
+struct __attribute__((packed,aligned(4))) ratios11 {
+	u32 d0r0 : 11;
+	u32 d0r1 : 11;
+	u32 d1r0 : 11;
+	u32 d1r1 : 11;
+	u32 d2r0 : 11;
+	u32 d2r1 : 11;
+	u32 d3r0 : 11;
+	u32 d3r1 : 11;
+};
+struct __attribute__((packed,aligned(4))) ratios10 {
+	u32 d0r0 : 10;
+	u32 d0r1 : 10;
+	u32 d1r0 : 10;
+	u32 d1r1 : 10;
+	u32 d2r0 : 10;
+	u32 d2r1 : 10;
+	u32 d3r0 : 10;
+	u32 d3r1 : 10;
+};
+struct omap5_ddr_phy_status {
+	u32 locked_c01	: 1;
+	u32 locked_c2	: 1;
+	u32 locked_d0	: 1;
+	u32 locked_d1	: 1;
+	u32 locked_d2	: 1;
+	u32 locked_d3	: 1;
+	u32 : 0;
+	/* <undocumented> */
+	/* <guess quality="decent"> */
+	u32 dll_value_c01 : 9;
+	u32 dll_value_c2  : 9;
+	u32 : 0;
+	struct __attribute__((packed,aligned(4))) {
+		u32 d0 : 9;
+		u32 d1 : 9;
+		u32 d2 : 9;
+		u32 d3 : 9;
+	} dll_value;
+	/* </guess> */
+	u32 status_5;
+	u32 status_6;
+	u32 status_7;
+	/* </undocumented> */
+	struct ratios10 rd_dqs;  /* status  8-10 ~ control  5- 7 */
+	struct ratios11 fifo_we; /* status 11-13 ~ control  2- 4 */
+	struct ratios10 wr_data; /* status 14-16 ~ control  8-10 */
+	struct ratios10 wr_dqs;  /* status 17-19 ~ control 11-13 */
+	struct __attribute__((packed,aligned(4))) {
+	/* read capture fifo reset error counters */
+	u32 fifo_rst_d0 : 4;
+	u32 fifo_rst_d1 : 4;
+	u32 fifo_rst_d2 : 4;
+	u32 fifo_rst_d3 : 4;
+	/* sticky errors */
+	u32 dll_d0  : 1;
+	u32 dll_d1  : 1;
+	u32 dll_d2  : 1;
+	u32 dll_d3  : 1;
+	u32 dll_c01 : 1;
+	u32 dll_c2  : 1;
+	u32 fifo_we_misalign	: 4;
+	u32 rdlvl_fail		: 4;  // read data eye training error
+	u32 wrlvl_fail		: 4;  // write leveling error
+	u32 gatelvl_fail	: 4;  // read dqs gate training error
+	} err;
+};
+static void prdebug_dll( u32 value, bool locked, bool errevt )
+{
+	debug( "   \e[%sm%4s\e[m %3x",
+			locked && !errevt ? "32" : "1;31",
+			locked ? errevt ? "err" : "ok" : "FAIL",
+			value );
+}
+#define prdebug_ratios( label, x ) \
+	debug( label " %3x %3x %3x %3x  %3x %3x %3x %3x\n",  \
+		x.d0r0, x.d1r0, x.d2r0, x.d3r0,  \
+		x.d0r1, x.d1r1, x.d2r1, x.d3r1 )
+static void debug_omap5_ddr3_leveling(struct emif_reg_struct *emif)
+{
+	struct omap5_ddr_phy_status s;
+	u32 *sbuf = (u32 *) &s;
+	int i;
+	u32 es = readl(&emif->emif_status);
+	u32 rl, wl, gl;
+	for(i = 0; i < 21; i++)
+		sbuf[i] = readl(&emif->emif_ddr_phy_status[i]);
+	omap5_ddr3_phy_clearerr(emif);
+
+	if( !( es & 1 << 2 ) )  debug( "ddr phy not ready\n" );
+	if( es & 1 << 4 )  debug( "ddr3 write leveling timeout\n" );
+	if( es & 1 << 5 )  debug( "ddr3 read data eye training timeout\n" );
+	if( es & 1 << 6 )  debug( "ddr3 read dqs gate training timeout\n" );
+
+	debug( "cmd phy dlls:" );
+	prdebug_dll( s.dll_value_c01, s.locked_c01, s.err.dll_c01 );
+	prdebug_dll( s.dll_value_c2, s.locked_c2, s.err.dll_c2 );
+	debug( "\ndata phy dlls:" );
+	prdebug_dll( s.dll_value.d0, s.locked_d0, s.err.dll_d0 );
+	prdebug_dll( s.dll_value.d1, s.locked_d1, s.err.dll_d1 );
+	prdebug_dll( s.dll_value.d2, s.locked_d2, s.err.dll_d2 );
+	prdebug_dll( s.dll_value.d3, s.locked_d3, s.err.dll_d3 );
+	debug( "\n" );
+
+	debug( "phy status 5-7:  %x %x %x\n",
+			s.status_5, s.status_6, s.status_7 );
+
+	prdebug_ratios( "read dqs ratios:   ", s.rd_dqs );
+	prdebug_ratios( "fifo we ratios:    ", s.fifo_we );
+	prdebug_ratios( "write data ratios: ", s.wr_data );
+	prdebug_ratios( "write dqs ratios:  ", s.wr_dqs );
+
+	rl = s.err.rdlvl_fail;
+	wl = s.err.wrlvl_fail;
+	gl = s.err.gatelvl_fail;
+	if( rl || wl || gl ) {
+		debug(  "\e[1;31mleveling errors\e[m:   " );
+		for( i = 0; i < 4; i++ ) {
+			debug( " %c%c%c",
+					(rl & 1) ? 'r' : '-',
+					(wl & 1) ? 'w' : '-',
+					(gl & 1) ? 'g' : '-' );
+			rl >>= 1;
+			wl >>= 1;
+			gl >>= 1;
+		}
+		debug( "\n" );
+	}
+	gl = s.err.fifo_we_misalign;
+	if( gl ) {
+		debug(  "\e[1;31mfifo misalignment\e[m: ");
+		for( i = 0; i < 4; i++ ) {
+			debug( " %3s", (gl & 1) ? "yes" : " - " );
+			gl >>= 1;
+		}
+		debug( "\n" );
+	}
+	if( s.err.fifo_rst_d0 || s.err.fifo_rst_d1 || s.err.fifo_rst_d2 || s.err.fifo_rst_d3 ) {
+		debug(  "\e[1;31mfifo rst errors\e[m:    %3d %3d %3d %3d\n",
+			s.err.fifo_rst_d0,
+			s.err.fifo_rst_d1,
+			s.err.fifo_rst_d2,
+			s.err.fifo_rst_d3 );
+	}
+}
+
 static void omap5_ddr3_leveling(u32 base, const struct emif_regs *regs)
 {
 	struct emif_reg_struct *emif = (struct emif_reg_struct *)base;
@@ -236,12 +388,16 @@ static void omap5_ddr3_leveling(u32 base, const struct emif_regs *regs)
 	writel(((LP_MODE_DISABLE << EMIF_REG_LP_MODE_SHIFT)
 	       & EMIF_REG_LP_MODE_MASK), &emif->emif_pwr_mgmt_ctrl);
 
+	omap5_ddr3_phy_clearerr(emif);
+
 	/* Launch Full leveling */
 	writel(DDR3_FULL_LVL, &emif->emif_rd_wr_lvl_ctl);
 
 	/* Wait till full leveling is complete */
 	readl(&emif->emif_rd_wr_lvl_ctl);
 	__udelay(130);
+
+	debug_omap5_ddr3_leveling(emif);
 
 	/* Read data eye leveling no of samples */
 	config_data_eye_leveling_samples(base);
@@ -259,14 +415,7 @@ static void omap5_ddr3_leveling(u32 base, const struct emif_regs *regs)
 	writel(DDR3_INC_LVL, &emif->emif_rd_wr_lvl_ctl);
 	__udelay(130);
 
-	{
-		u32 *status = emif->emif_ddr_phy_status;
-		int i;
-		debug("emif status: %x\nphy status:", emif->emif_status);
-		for(i = 0; i < 21; i++)
-			debug(" %x", readl(status++));
-		debug("\n");
-	}
+	debug_omap5_ddr3_leveling(emif);
 }
 
 static void update_hwleveling_output(u32 base, const struct emif_regs *regs)
