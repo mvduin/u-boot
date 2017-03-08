@@ -234,7 +234,7 @@ struct __attribute__((packed,aligned(4))) ratios10 {
 	u32 d3r1 : 10;
 };
 struct omap5_ddr_phy_status {
-	u32 locked_c01	: 1;
+/*140*/	u32 locked_c01	: 1;
 	u32 locked_c2	: 1;
 	u32 locked_d0	: 1;
 	u32 locked_d1	: 1;
@@ -243,25 +243,25 @@ struct omap5_ddr_phy_status {
 	u32 : 0;
 	/* <undocumented> */
 	/* <guess quality="decent"> */
-	u32 dll_value_c01 : 9;
+/*144*/	u32 dll_value_c01 : 9;
 	u32 dll_value_c2  : 9;
 	u32 : 0;
-	struct __attribute__((packed,aligned(4))) {
+/*148*/	struct __attribute__((packed,aligned(4))) {
 		u32 d0 : 9;
 		u32 d1 : 9;
 		u32 d2 : 9;
 		u32 d3 : 9;
 	} dll_value;
 	/* </guess> */
-	u32 status_5;
-	u32 status_6;
-	u32 status_7;
+/*150*/	u32 status_5;
+/*154*/	u32 status_6;
+/*158*/	u32 status_7;
 	/* </undocumented> */
-	struct ratios10 rd_dqs;  /* status  8-10 ~ control  5- 7 */
-	struct ratios11 fifo_we; /* status 11-13 ~ control  2- 4 */
-	struct ratios10 wr_data; /* status 14-16 ~ control  8-10 */
-	struct ratios10 wr_dqs;  /* status 17-19 ~ control 11-13 */
-	struct __attribute__((packed,aligned(4))) {
+/*15c*/	struct ratios10 rd_dqs;  /* status  8-10 ~ control  5- 7 */
+/*168*/	struct ratios11 fifo_we; /* status 11-13 ~ control  2- 4 */
+/*174*/	struct ratios10 wr_data; /* status 14-16 ~ control  8-10 */
+/*180*/	struct ratios10 wr_dqs;  /* status 17-19 ~ control 11-13 */
+/*18c*/	struct __attribute__((packed,aligned(4))) {
 	/* read capture fifo reset error counters */
 	u32 fifo_rst_d0 : 4;
 	u32 fifo_rst_d1 : 4;
@@ -302,10 +302,14 @@ static void debug_omap5_ddr3_leveling(struct emif_reg_struct *emif)
 		sbuf[i] = readl(&emif->emif_ddr_phy_status[i]);
 	omap5_ddr3_phy_clearerr(emif);
 
-	if( !( es & 1 << 2 ) )  debug( "ddr phy not ready\n" );
-	if( es & 1 << 4 )  debug( "ddr3 write leveling timeout\n" );
-	if( es & 1 << 5 )  debug( "ddr3 read data eye training timeout\n" );
-	if( es & 1 << 6 )  debug( "ddr3 read dqs gate training timeout\n" );
+	if( !( es & 1 << 2 ) )
+		debug( "\e[1;31mddr phy not ready\e[m\n" );
+	if( es & 1 << 4 )
+		debug( "\e[1;31mddr3 write leveling timeout\e[m\n" );
+	if( es & 1 << 5 )
+		debug( "\e[1;31mddr3 read data eye training timeout\e[m\n" );
+	if( es & 1 << 6 )
+		debug( "\e[1;31mddr3 read dqs gate training timeout\e[m\n" );
 
 	debug( "cmd phy dlls:" );
 	prdebug_dll( s.dll_value_c01, s.locked_c01, s.err.dll_c01 );
@@ -387,15 +391,19 @@ static void omap5_ddr3_leveling(u32 base, const struct emif_regs *regs)
 
 	writel(((LP_MODE_DISABLE << EMIF_REG_LP_MODE_SHIFT)
 	       & EMIF_REG_LP_MODE_MASK), &emif->emif_pwr_mgmt_ctrl);
+	__udelay(130);
 
 	omap5_ddr3_phy_clearerr(emif);
+
+	/* Disable refreshes before leveling */
+	setbits_le32(&emif->emif_sdram_ref_ctrl, EMIF_REG_INITREF_DIS_MASK);
 
 	/* Launch Full leveling */
 	writel(DDR3_FULL_LVL, &emif->emif_rd_wr_lvl_ctl);
 
 	/* Wait till full leveling is complete */
-	readl(&emif->emif_rd_wr_lvl_ctl);
-	__udelay(130);
+	//readl(&emif->emif_rd_wr_lvl_ctl);
+	__udelay(300);
 
 	debug_omap5_ddr3_leveling(emif);
 
@@ -409,13 +417,16 @@ static void omap5_ddr3_leveling(u32 base, const struct emif_regs *regs)
 	writel(0x2 << EMIF_REG_WRLVLINC_INT_SHIFT,
 	       &emif->emif_rd_wr_lvl_ctl);
 
-	__udelay(130);
+	__udelay(300);
 
 	/* Launch Incremental leveling */
 	writel(DDR3_INC_LVL, &emif->emif_rd_wr_lvl_ctl);
-	__udelay(130);
+	__udelay(300);
 
 	debug_omap5_ddr3_leveling(emif);
+
+	/* Enable refreshes after leveling */
+	clrbits_le32(&emif->emif_sdram_ref_ctrl, EMIF_REG_INITREF_DIS_MASK);
 }
 
 static void update_hwleveling_output(u32 base, const struct emif_regs *regs)
@@ -467,17 +478,14 @@ static void dra7_ddr3_leveling(u32 base, const struct emif_regs *regs)
 	struct emif_reg_struct *emif = (struct emif_reg_struct *)base;
 
 	/* Clear Error Status */
-	clrsetbits_le32(&emif->emif_ddr_ext_phy_ctrl_36,
-			EMIF_REG_PHY_FIFO_WE_IN_MISALINED_CLR,
+	setbits_le32(&emif->emif_ddr_ext_phy_ctrl_36,
 			EMIF_REG_PHY_FIFO_WE_IN_MISALINED_CLR);
 
-	clrsetbits_le32(&emif->emif_ddr_ext_phy_ctrl_36_shdw,
-			EMIF_REG_PHY_FIFO_WE_IN_MISALINED_CLR,
+	setbits_le32(&emif->emif_ddr_ext_phy_ctrl_36_shdw,
 			EMIF_REG_PHY_FIFO_WE_IN_MISALINED_CLR);
 
-	/* Disable refreshed before leveling */
-	clrsetbits_le32(&emif->emif_sdram_ref_ctrl, EMIF_REG_INITREF_DIS_MASK,
-			EMIF_REG_INITREF_DIS_MASK);
+	/* Disable refreshes before leveling */
+	setbits_le32(&emif->emif_sdram_ref_ctrl, EMIF_REG_INITREF_DIS_MASK);
 
 	/* Start Full leveling */
 	writel(DDR3_FULL_LVL, &emif->emif_rd_wr_lvl_ctl);
