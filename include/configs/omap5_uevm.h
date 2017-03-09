@@ -19,46 +19,24 @@
 	"name=rootfs,start=2MiB,size=-,uuid=${uuid_gpt_rootfs}"
 #endif
 
-#define DFU_ALT_INFO_MMC \
-	"dfu_alt_info_mmc=" \
-	"boot part 0 1;" \
-	"rootfs part 0 2;" \
-	"MLO fat 0 1;" \
-	"MLO.raw raw 0x100 0x100;" \
-	"u-boot.img.raw raw 0x300 0x400;" \
-	"spl-os-args.raw raw 0x80 0x80;" \
-	"spl-os-image.raw raw 0x900 0x2000;" \
-	"spl-os-args fat 0 1;" \
-	"spl-os-image fat 0 1;" \
-	"u-boot.img fat 0 1;" \
-	"uEnv.txt fat 0 1\0"
-
-#define DFU_ALT_INFO_EMMC \
-	"dfu_alt_info_emmc=" \
-	"rawemmc raw 0 3751936;" \
-	"boot part 1 1;" \
-	"rootfs part 1 2;" \
-	"MLO fat 1 1;" \
-	"MLO.raw raw 0x100 0x100;" \
-	"u-boot.img.raw raw 0x300 0x400;" \
-	"spl-os-args.raw raw 0x80 0x80;" \
-	"spl-os-image.raw raw 0x900 0x2000;" \
-	"spl-os-args fat 1 1;" \
-	"spl-os-image fat 1 1;" \
-	"u-boot.img fat 1 1;" \
-	"uEnv.txt fat 1 1\0"
-
+#if !defined(CONFIG_SPL_BUILD) || defined(CONFIG_SPL_DFU_SUPPORT)
 #define DFU_ALT_INFO_RAM \
 	"dfu_alt_info_ram=" \
 	"kernel ram 0x80200000 0x4000000;" \
 	"fdt ram 0x80f80000 0x80000;" \
 	"ramdisk ram 0x81000000 0x4000000\0"
-
 #define DFUARGS \
 	"dfu_bufsiz=0x10000\0" \
-	DFU_ALT_INFO_MMC \
-	DFU_ALT_INFO_EMMC \
 	DFU_ALT_INFO_RAM
+#endif
+
+#ifdef CONFIG_SPL_BUILD
+#undef CONFIG_CMD_BOOTD
+#ifdef CONFIG_SPL_DFU_SUPPORT
+#define CONFIG_SPL_LOAD_FIT_ADDRESS 0x80200000
+#define CONFIG_SPL_HASH_SUPPORT
+#endif
+#endif
 
 #include <configs/ti_omap5_common.h>
 
@@ -76,8 +54,6 @@
 #define CONFIG_SYS_REDUNDAND_ENVIRONMENT
 
 /* Enhance our eMMC support / experience. */
-#define CONFIG_CMD_GPT
-#define CONFIG_EFI_PARTITION
 #define CONFIG_HSMMC2_8BIT
 #define CONFIG_SUPPORT_EMMC_BOOT
 
@@ -96,11 +72,11 @@
 #define CONFIG_OMAP_EHCI_PHY2_RESET_GPIO 80
 #define CONFIG_OMAP_EHCI_PHY3_RESET_GPIO 79
 
-/* Enabled commands */
+#ifdef CONFIG_USB_GADGET
+#define CONFIG_USB_FUNCTION_MASS_STORAGE
+#endif
 
-/* USB Networking options */
-#define CONFIG_USB_HOST_ETHER
-#define CONFIG_USB_ETHER_SMSC95XX
+/* Enabled commands */
 
 #define CONSOLEDEV		"ttyO2"
 
@@ -116,4 +92,5 @@
 #define CONFIG_SYS_SCSI_MAX_DEVICE	(CONFIG_SYS_SCSI_MAX_SCSI_ID * \
 						CONFIG_SYS_SCSI_MAX_LUN)
 
+#define CONFIG_CMD_POWEROFF	1
 #endif /* __CONFIG_OMAP5_EVM_H */

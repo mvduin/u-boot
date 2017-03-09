@@ -282,3 +282,10 @@ int board_usb_init(int index, enum usb_init_type init)
 	return 0;
 }
 #endif
+
+int do_poweroff(cmd_tbl_t *cmdtp, int flag, int argc, char *const argv[])
+{
+	twl603x_poweroff(false);
+	printf ("failed to power down\n");
+	return (0);
+}
