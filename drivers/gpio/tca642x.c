@@ -167,50 +167,65 @@ int tca642x_set_inital_state(uchar chip, struct tca642x_bank_info init_data[])
 }
 
 #ifdef CONFIG_CMD_TCA642X
+
+struct tca642x_state {
+	u32 in;
+	u32 out;
+	u32 pol;
+	u32 dir;
+	// dir = 0:  driver enabled, interrupt disabled
+	// dir = 1:  driver disabled, interrupt enabled
+	// in = pin state XOR polarity
+};
+
+// read all registers except the reserved ones (bytes 3, 7, 11, 15)
+static int tca642x_read_state(uchar chip, u8 regs[16])
+{
+	int org_bus_num = i2c_get_bus_num();
+	int err = i2c_set_bus_num(CONFIG_SYS_I2C_TCA642X_BUS_NUM);
+	for (int i = 0; i < 0x10 && !err; i += 4)
+		err = i2c_read(chip, 0x80 + i, 1, regs + i, 3);
+	i2c_set_bus_num(org_bus_num);
+	return err;
+}
+
 /*
  * Display tca642x information
  */
 /* static */ int tca642x_info(uchar chip)
 {
-	int i, j;
-	uint8_t data;
+	struct tca642x_state s = { 0, 0, 0, 0 };
+	int err = tca642x_read_state(chip, (u8 *) &s);
+	if (err)
+		return err;
+
+	u32 const fail = (s.in ^ s.out ^ s.pol) & ~s.dir;
 
 	printf("tca642x@ 0x%x (%d pins):\n", chip, 24);
-	for (i = 0; i < 3; i++) {
-		printf("Bank %i\n", i);
-		if (tca642x_reg_read(chip,
-				     tca642x_regs[i].configuration_reg,
-				     &data) < 0)
-			return -1;
-		printf("\tConfiguration: ");
-		for (j = 7; j >= 0; j--)
-			printf("%c", data & (1 << j) ? 'i' : 'o');
-		printf("\n");
 
-		if (tca642x_reg_read(chip,
-				     tca642x_regs[i].polarity_reg, &data) < 0)
-			return -1;
-		printf("\tPolarity: ");
-		for (j = 7; j >= 0; j--)
-			printf("%c", data & (1 << j) ? '1' : '0');
-		printf("\n");
-
-		if (tca642x_reg_read(chip,
-				     tca642x_regs[i].input_reg, &data) < 0)
-			return -1;
-		printf("\tInput value: ");
-		for (j = 7; j >= 0; j--)
-			printf("%c", data & (1 << j) ? '1' : '0');
-		printf("\n");
-
-		if (tca642x_reg_read(chip,
-				     tca642x_regs[i].output_reg, &data) < 0)
-			return -1;
-		printf("\tOutput value: ");
-		for (j = 7; j >= 0; j--)
-			printf("%c", data & (1 << j) ? '1' : '0');
-		printf("\n");
+	printf("   out  ");
+	for (u32 pin = 1 << 24; pin >>= 1; ) {
+		if (pin & 0x8080) printf("  ");
+		putc( (pin & s.dir) ? '.' : (pin & s.out) ? '1' : '0' );
 	}
+	putc('\n');
+
+	printf("   in   ");
+	for (u32 pin = 1 << 24; pin >>= 1; ) {
+		if (pin & 0x8080) printf("  ");
+		putc( (pin & s.dir) ? (pin & s.in) ? '1' : '0'
+				: (pin & fail) ? 'X' : ' ' );
+	}
+	putc('\n');
+
+	s.in ^= s.pol;
+
+	printf("   line ");
+	for (u32 pin = 1 << 24; pin >>= 1; ) {
+		if (pin & 0x8080) printf("  ");
+		putc( (pin & s.in) ? '-' : '_' );
+	}
+	putc('\n');
 
 	return 0;
 }
