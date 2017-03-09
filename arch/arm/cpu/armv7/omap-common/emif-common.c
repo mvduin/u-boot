@@ -233,6 +233,58 @@ struct __attribute__((packed,aligned(4))) ratios10 {
 	u32 d3r0 : 10;
 	u32 d3r1 : 10;
 };
+struct omap5_ddr_phy_control {
+	// excluding shadow regs
+	struct __attribute__((packed,aligned(4))) {
+		u32 c0 : 10;
+		u32 c1 : 10;
+		u32 c2 : 10;
+	} cmd;
+	struct ratios11 fifo_we;	/* control  2- 4 ~ status 11-13 */
+	struct ratios10 rd_dqs;	/* control  5- 7 ~ status  8-10 */
+	struct ratios10 wr_data;	/* control  8-10 ~ status 14-16 */
+	struct ratios10 wr_dqs;	/* control 11-13 ~ status 17-19 */
+
+	// set raw delays (dll unlocked mode), broadcast to all phys/ranks.
+	// Max value is 0x1ff ?
+	struct __attribute__((packed,aligned(4))) {
+		uint cmd	: 12;
+		uint fifo_we	: 12;
+		uint rd_dqs	: 12;
+		uint wr_data	: 12;
+		uint wr_dqs	: 12;
+	} delay;
+
+	// "Offset value from write dqs to write dq during write leveling."
+	// "Don't care in DDR3 mode due to the leveling."
+	struct __attribute__((packed,aligned(4))) {
+		uint d0 : 7;
+		uint d1 : 7;
+		uint d2 : 7;
+		uint d3 : 7;
+	} dq_offset;
+
+	struct __attribute__((packed,aligned(4))) {
+		bool use_rank0_delays	: 1;  // ( for all ranks)
+		bool gatelvl_init_mode	: 1;
+	};
+
+	// "The recommended setting is half cycle less than total delay
+	// required on fifo_we_in to align to DQS at PHY."
+	struct ratios11 gatelvl_init;
+	// "The recommended setting is half cycle less than total skew between
+	// CLK and DQS at the DDR.
+	struct ratios10 wrlvl_init;
+
+	struct __attribute__((packed,aligned(4))) {
+		uint gatelvl	: 4;
+		uint wrlvl	: 4;
+
+		bool clear_fifo_we_misalign	: 1;
+		bool clear_phy_mdll_unlock_err	: 1;
+		bool clear_read_fifo_errors	: 1;
+	};
+};
 struct omap5_ddr_phy_status {
 /*140*/	u32 locked_c01	: 1;
 	u32 locked_c2	: 1;
@@ -280,6 +332,36 @@ struct omap5_ddr_phy_status {
 	u32 gatelvl_fail	: 4;  // read dqs gate training error
 	} err;
 };
+
+#define debug_cratios( label, x ) \
+	debug( label " %3x %3x  %3x\n", x.c0, x.c1, x.c2 )
+
+#define debug_dratios( label, x ) \
+	debug( label " %3x %3x %3x %3x  %3x %3x %3x %3x\n",  \
+		x.d0r0, x.d1r0, x.d2r0, x.d3r0,  \
+		x.d0r1, x.d1r1, x.d2r1, x.d3r1 )
+
+static void debug_omap5_ddr3_config(struct emif_reg_struct *emif)
+{
+	struct omap5_ddr_phy_control c;
+	barrier();
+	for( int i = 0; i < sizeof(c)/sizeof(u32); i++ )
+		((u32 *) &c)[i] = (&emif->emif_ddr_ext_phy_ctrl_1)[ 2*i ];
+	u32 rc = emif->emif_sdram_ref_ctrl;
+	u32 lc = emif->emif_rd_wr_lvl_ctl;
+	u32 pc = emif->emif_ddr_phy_ctrl_1;
+	barrier();
+	debug_cratios( "cmd phy ratios:    ", c.cmd );
+	debug_dratios( "read dqs ratios:   ", c.rd_dqs );
+	debug_dratios( "fifo we ratios:    ", c.fifo_we );
+	debug_dratios( "write data ratios: ", c.wr_data );
+	debug_dratios( "write dqs ratios:  ", c.wr_dqs );
+	printf( "refresh 0x%x, leveling 0x%x, phy control 0x%x\n", rc, lc, pc );
+	if( pc & 1 << 27 ) printf( "   read data eye training masked!\n" );
+	if( pc & 1 << 26 ) printf( "   read dqs gate training masked!\n" );
+	if( pc & 1 << 25 ) printf( "   write leveling masked!\n" );
+}
+
 static void prdebug_dll( u32 value, bool locked, bool errevt )
 {
 	debug( "   \e[%sm%4s\e[m %3x",
@@ -287,19 +369,14 @@ static void prdebug_dll( u32 value, bool locked, bool errevt )
 			locked ? errevt ? "err" : "ok" : "FAIL",
 			value );
 }
-#define prdebug_ratios( label, x ) \
-	debug( label " %3x %3x %3x %3x  %3x %3x %3x %3x\n",  \
-		x.d0r0, x.d1r0, x.d2r0, x.d3r0,  \
-		x.d0r1, x.d1r1, x.d2r1, x.d3r1 )
+
 static void debug_omap5_ddr3_leveling(struct emif_reg_struct *emif)
 {
 	struct omap5_ddr_phy_status s;
-	u32 *sbuf = (u32 *) &s;
 	int i;
-	u32 es = readl(&emif->emif_status);
+	u32 es = readl( &emif->emif_status );
 	u32 rl, wl, gl;
-	for(i = 0; i < 21; i++)
-		sbuf[i] = readl(&emif->emif_ddr_phy_status[i]);
+	memcpy( &s, emif->emif_ddr_phy_status, sizeof s );
 	omap5_ddr3_phy_clearerr(emif);
 
 	if( !( es & 1 << 2 ) )
@@ -324,10 +401,10 @@ static void debug_omap5_ddr3_leveling(struct emif_reg_struct *emif)
 	debug( "phy status 5-7:  %x %x %x\n",
 			s.status_5, s.status_6, s.status_7 );
 
-	prdebug_ratios( "read dqs ratios:   ", s.rd_dqs );
-	prdebug_ratios( "fifo we ratios:    ", s.fifo_we );
-	prdebug_ratios( "write data ratios: ", s.wr_data );
-	prdebug_ratios( "write dqs ratios:  ", s.wr_dqs );
+	debug_dratios( "read dqs ratios:   ", s.rd_dqs );
+	debug_dratios( "fifo we ratios:    ", s.fifo_we );
+	debug_dratios( "write data ratios: ", s.wr_data );
+	debug_dratios( "write dqs ratios:  ", s.wr_dqs );
 
 	rl = s.err.rdlvl_fail;
 	wl = s.err.wrlvl_fail;
@@ -354,7 +431,8 @@ static void debug_omap5_ddr3_leveling(struct emif_reg_struct *emif)
 		}
 		debug( "\n" );
 	}
-	if( s.err.fifo_rst_d0 || s.err.fifo_rst_d1 || s.err.fifo_rst_d2 || s.err.fifo_rst_d3 ) {
+	if( s.err.fifo_rst_d0 || s.err.fifo_rst_d1
+			|| s.err.fifo_rst_d2 || s.err.fifo_rst_d3 ) {
 		debug(  "\e[1;31mfifo rst errors\e[m:    %3d %3d %3d %3d\n",
 			s.err.fifo_rst_d0,
 			s.err.fifo_rst_d1,
@@ -366,6 +444,10 @@ static void debug_omap5_ddr3_leveling(struct emif_reg_struct *emif)
 static void omap5_ddr3_leveling(u32 base, const struct emif_regs *regs)
 {
 	struct emif_reg_struct *emif = (struct emif_reg_struct *)base;
+	u32 ctl = regs->emif_ddr_phy_ctlr_1;
+	bool read_eye_training = !(ctl & EMIF_DDR_PHY_CTRL_1_RDLVL_MASK_MASK);
+	bool gate_training = !(ctl & EMIF_DDR_PHY_CTRL_1_RDLVLGATE_MASK_MASK);
+	bool write_leveling = !(ctl & EMIF_DDR_PHY_CTRL_1_WRLVL_MASK_MASK);
 
 	debug("omap5_ddr3_leveling(0x%x)\n", base);
 
@@ -382,21 +464,31 @@ static void omap5_ddr3_leveling(u32 base, const struct emif_regs *regs)
 	 * than CK on the board.It also helps provide some additional
 	 * margin for leveling.
 	 */
-	writel(regs->emif_ddr_phy_ctlr_1,
-	       &emif->emif_ddr_phy_ctrl_1);
-
-	writel(regs->emif_ddr_phy_ctlr_1,
-	       &emif->emif_ddr_phy_ctrl_1_shdw);
+//	writel(0, &emif->emif_rd_wr_lvl_ctl);
+//	writel(0, &emif->emif_rd_wr_lvl_rmp_ctl);
+	writel(ctl, &emif->emif_ddr_phy_ctrl_1);
+	writel(ctl, &emif->emif_ddr_phy_ctrl_1_shdw);
+	__udelay(130);
+//	writel(0x4350D435, &emif->emif_ddr_ext_phy_ctrl_5);
+//	writel(0x4350D435, &emif->emif_ddr_ext_phy_ctrl_5_shdw);
+//	writel(0x50D4350D, &emif->emif_ddr_ext_phy_ctrl_6);
+//	writel(0x50D4350D, &emif->emif_ddr_ext_phy_ctrl_6_shdw);
+//	writel(0x00000D43, &emif->emif_ddr_ext_phy_ctrl_7);
+//	writel(0x00000D43, &emif->emif_ddr_ext_phy_ctrl_7_shdw);
+//	writel(0x80000000, &emif->emif_rd_wr_lvl_rmp_ctl);
 	__udelay(130);
 
 	writel(((LP_MODE_DISABLE << EMIF_REG_LP_MODE_SHIFT)
 	       & EMIF_REG_LP_MODE_MASK), &emif->emif_pwr_mgmt_ctrl);
 	__udelay(130);
 
-	omap5_ddr3_phy_clearerr(emif);
-
 	/* Disable refreshes before leveling */
 	setbits_le32(&emif->emif_sdram_ref_ctrl, EMIF_REG_INITREF_DIS_MASK);
+	__udelay(130);
+
+	omap5_ddr3_phy_clearerr(emif);
+	debug_omap5_ddr3_config(emif);
+	__udelay(130);
 
 	/* Launch Full leveling */
 	writel(DDR3_FULL_LVL, &emif->emif_rd_wr_lvl_ctl);
@@ -407,20 +499,41 @@ static void omap5_ddr3_leveling(u32 base, const struct emif_regs *regs)
 
 	debug_omap5_ddr3_leveling(emif);
 
-	/* Read data eye leveling no of samples */
-	config_data_eye_leveling_samples(base);
+	/*XXX*/
+	if( false ) {
+		writel(0, &emif->emif_rd_wr_lvl_ctl);
+		writel(0, &emif->emif_rd_wr_lvl_rmp_ctl);
+		/* Enable refreshes after leveling */
+		clrbits_le32(&emif->emif_sdram_ref_ctrl, EMIF_REG_INITREF_DIS_MASK);
+		return;
+	}
+
+	if( read_eye_training ) {
+		/* Read data eye leveling no of samples */
+		config_data_eye_leveling_samples(base);
+	}
 
 	/*
 	 * Launch 8 incremental WR_LVL- to compensate for
 	 * PHY limitation.
 	 */
-	writel(0x2 << EMIF_REG_WRLVLINC_INT_SHIFT,
-	       &emif->emif_rd_wr_lvl_ctl);
+	u32 leveling = 0;
+	if( write_leveling ) {
+		leveling = 0x2 << EMIF_REG_WRLVLINC_INT_SHIFT;
+		writel(leveling, &emif->emif_rd_wr_lvl_ctl);
 
-	__udelay(300);
+		__udelay(130);
+	}
 
 	/* Launch Incremental leveling */
-	writel(DDR3_INC_LVL, &emif->emif_rd_wr_lvl_ctl);
+	leveling = DDR3_INC_LVL;
+	if (!read_eye_training)
+		leveling &= ~EMIF_REG_RDLVLINC_INT_MASK;
+	if (!gate_training)
+		leveling &= ~EMIF_REG_RDLVLGATEINC_INT_MASK;
+	if (!write_leveling)
+		leveling &= ~EMIF_REG_WRLVLINC_INT_MASK;
+	writel(leveling, &emif->emif_rd_wr_lvl_ctl);
 	__udelay(300);
 
 	debug_omap5_ddr3_leveling(emif);
