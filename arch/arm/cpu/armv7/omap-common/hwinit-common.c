@@ -161,6 +161,23 @@ void early_system_init(void)
 	/* a hack to get the console early */
 	extern void preloader_console_init(void);
 	preloader_console_init();
+	{
+		static char const *const reset_causes[] = {
+			"cold", "sw warm", "unknown type 2", "watchdog",
+			"unknown type 4", "external", "volt mpu", "volt mm",
+			"volt core", "icepick", "c2c", "tshut mpu",
+			"tshut mm", "tshut core",
+		};
+		// check device PRM
+		u32 rstst = readl(0x4ae07c04);
+		u32 rsttime = readl(0x4ae07c08);
+		for(int i = 0; i < sizeof(reset_causes)/sizeof(char*); i++) {
+			if( rstst & 1 << i )
+				printf( "%s reset\n", reset_causes[i] );
+		}
+		if( (rsttime & 0x3ff) == 6 )
+			printf( "rsttime1 has not yet been configured\n" );
+	}
 #endif
 	do_board_detect();
 	vcores_init();
