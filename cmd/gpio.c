@@ -122,10 +122,16 @@ static int do_gpio(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 	int value;
 	const char *str_cmd, *str_gpio = NULL;
 	int ret;
+	bool quiet = false;
 #ifdef CONFIG_DM_GPIO
 	bool all = false;
 #endif
 
+	if (argc > 1 && !strcmp(argv[1], "-q")) {
+		quiet = true;
+		argc--;
+		argv++;
+	}
 	if (argc < 2)
 		return CMD_RET_USAGE;
 	str_cmd = argv[1];
@@ -141,6 +147,8 @@ static int do_gpio(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 	if (argc > 0)
 		str_gpio = *argv;
 	if (!strncmp(str_cmd, "status", 2)) {
+		if (quiet)
+			return CMD_RET_USAGE;
 		/* Support deprecated gpio_status() */
 #ifdef gpio_status
 		gpio_status();
@@ -213,6 +221,8 @@ static int do_gpio(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 		if (!IS_ERR_VALUE(value))
 			gpio_direction_output(gpio, value);
 	}
+	if (quiet)
+		goto out;
 	printf("gpio: pin %s (gpio %i) value is ", str_gpio, gpio);
 	if (IS_ERR_VALUE(value))
 		printf("unknown (ret=%d)\n", value);
@@ -227,7 +237,7 @@ static int do_gpio(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 			printf("   Warning: value of pin is still %d\n", nval);
 	}
 
-	if (ret != -EBUSY)
+out:	if (ret != -EBUSY)
 		gpio_free(gpio);
 
 	return value;
@@ -235,6 +245,6 @@ static int do_gpio(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 
 U_BOOT_CMD(gpio, 4, 0, do_gpio,
 	   "query and control gpio pins",
-	   "<input|set|clear|toggle> <pin>\n"
+	   "[-q] (input|set|clear|toggle) <pin>\n"
 	   "    - input/set/clear/toggle the specified pin\n"
 	   "gpio status [-a] [<bank> | <pin>]  - show [all/claimed] GPIOs");
