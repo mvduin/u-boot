@@ -127,7 +127,6 @@ static int do_gpio(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 #endif
 
 	if (argc < 2)
- show_usage:
 		return CMD_RET_USAGE;
 	str_cmd = argv[1];
 	argc -= 2;
@@ -149,12 +148,12 @@ static int do_gpio(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 #elif defined(CONFIG_DM_GPIO)
 		return cmd_process_error(cmdtp, do_gpio_status(all, str_gpio));
 #else
-		goto show_usage;
+		return CMD_RET_USAGE;
 #endif
 	}
 
 	if (!str_gpio)
-		goto show_usage;
+		return CMD_RET_USAGE;
 
 	/* parse the behavior */
 	switch (*str_cmd) {
@@ -162,7 +161,7 @@ static int do_gpio(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 		case 's': sub_cmd = GPIO_SET;    break;
 		case 'c': sub_cmd = GPIO_CLEAR;  break;
 		case 't': sub_cmd = GPIO_TOGGLE; break;
-		default:  goto show_usage;
+		default:  return CMD_RET_USAGE;
 	}
 
 #if defined(CONFIG_DM_GPIO)
@@ -182,13 +181,13 @@ static int do_gpio(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 	/* turn the gpio name into a gpio number */
 	gpio = name_to_gpio(str_gpio);
 	if (gpio < 0)
-		goto show_usage;
+		return CMD_RET_USAGE;
 #endif
 	/* grab the pin before we tweak it */
 	ret = gpio_request(gpio, "cmd_gpio");
 	if (ret && ret != -EBUSY) {
 		printf("gpio: requesting pin %u failed\n", gpio);
-		return -1;
+		return CMD_RET_FAILURE;
 	}
 
 	/* finally, let's do it: set direction and exec command */
@@ -209,7 +208,7 @@ static int do_gpio(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 				value = !value;
 			break;
 		default:
-			goto show_usage;
+			return CMD_RET_USAGE;
 		}
 		gpio_direction_output(gpio, value);
 	}
