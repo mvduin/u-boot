@@ -42,7 +42,7 @@ static int do_sleep(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 
 	while (get_timer(start) < delay) {
 		if (ctrlc())
-			return (-1);
+			return CMD_RET_FAILURE;
 
 		udelay(100);
 	}
