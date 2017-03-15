@@ -22,4 +22,27 @@
 
 #define CONFIG_SPL_ABORT_ON_RAW_IMAGE 1
 
+#undef CONFIG_BOOTCOMMAND
+#define CONFIG_BOOTCOMMAND \
+	"run findfdt; " \
+	"gpio -q clear 230; " \
+	"i2c mw 16b 04 93; " \
+	"i2c mw 048 a9 30; " \
+	"i2c mw 049 16 8a; " \
+	"i2c mw 464 ff 01 2; " \
+	"i2c mw 464 07 10 2; " \
+	"i2c mw 464 10 0; " \
+	"tca642x input 05; " \
+	"tca642x input 25; " \
+	/* break on topright shoulder button */ \
+	"gpio -q input 179 && exit; " \
+	"run bootcmd_mmc0; " \
+	"i2c mw 464 07 00 2; " \
+	"i2c mw 464 0d 10 2; " \
+	"i2c mw 464 10 0; " \
+	"run bootcmd_mmc1; " \
+	"tca642x output 05 0; " \
+	"i2c mw 464 ff 01 2; " \
+	""
+
 #endif /* __CONFIG_PANDORA_PYRA_LC15_H */

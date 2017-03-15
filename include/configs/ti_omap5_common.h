@@ -83,6 +83,35 @@
 		"if test $fdtfile = undefined; then " \
 			"echo WARNING: Could not determine device tree to use; fi; \0" 	DFUARGS \
 	NETARGS \
+	"boot_scripts=boot.scr.uimg boot.scr\0" \
+	"extlinux_path=/boot/extlinux/extlinux.conf\0" \
+	\
+	"boot_extlinux="						\
+		"test -e ${dev} ${extlinux_path} || exit; "		\
+		"echo boot config ${extlinux_path}; "			\
+		"sysboot ${dev} any ${scriptaddr} ${extlinux_path}\0"	\
+	\
+	"boot_a_script="						\
+		"test -e ${dev} /boot/${script} || exit; "		\
+		"echo boot script /boot/${script}; "			\
+		"load ${dev} ${scriptaddr} /boot/${script}; "		\
+		"source ${scriptaddr}\0"				\
+	\
+	"scan_dev_for_boot="						\
+		"fstype ${dev} bootfstype || exit; "			\
+		"echo boot device ${dev}; "				\
+		"run boot_extlinux; "					\
+		"for script in ${boot_scripts}; do "			\
+			"run boot_a_script; "				\
+		"done\0"						\
+	\
+	"bootcmd_mmc0="							\
+		"setenv dev mmc 0:1; "					\
+		"run scan_dev_for_boot\0"				\
+	\
+	"bootcmd_mmc1="							\
+		"setenv dev mmc 1:1; "					\
+		"run scan_dev_for_boot\0"				\
 
 
 #define CONFIG_SYS_MEMTEST_START	0x82000000	/* memtest works here */
@@ -90,18 +119,9 @@
 #define CONFIG_SYS_ALT_MEMTEST
 
 #define CONFIG_BOOTCOMMAND \
-	"echo Letux OMAP5 bootcmd;" \
-	"if test ${dofastboot} -eq 1; then " \
-		"echo Boot fastboot requested, resetting dofastboot ...;" \
-		"setenv dofastboot 0; saveenv;" \
-		"echo Booting into fastboot ...; fastboot 0;" \
-	"fi;" \
 	"run findfdt; " \
-	"run envboot; " \
-	"setenv mmcdev 0; " \
-	"run mmcboot;" \
-	"setenv mmcdev 1; " \
-	"run mmcboot;" \
+	"run bootcmd_mmc0; " \
+	"run bootcmd_mmc1; " \
 	""
 
 /*
