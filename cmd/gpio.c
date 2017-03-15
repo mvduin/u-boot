@@ -210,7 +210,8 @@ static int do_gpio(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 		default:
 			return CMD_RET_USAGE;
 		}
-		gpio_direction_output(gpio, value);
+		if (!IS_ERR_VALUE(value))
+			gpio_direction_output(gpio, value);
 	}
 	printf("gpio: pin %s (gpio %i) value is ", str_gpio, gpio);
 	if (IS_ERR_VALUE(value))
