@@ -168,8 +168,8 @@ const struct pad_conf_entry wkupconf_mmcmux_lc15[] = {
 };
 
 const struct pad_conf_entry padconf_mmcmux_lc15[] = {
-	{HSI2_ACFLAG, (IEN | M6)}, /* gpio 3_82 */
-	{HSI2_CAREADY, (IEN | M6)}, /* gpio 3_76 */
+	{HSI2_ACFLAG, (IEN | PTD | M6)}, /* gpio 3_82 */
+	{HSI2_CAREADY, (IEN | PTU | M6)}, /* gpio 3_76 */
 };
 
 /* FIXME: board revision 5.0 uses different gpios */
@@ -194,9 +194,9 @@ static void simple_ram_test(void)
 
 int board_mmc_init(bd_t *bis)
 {
-	int hard_select = 7;	/* gpio to select uSD (0) or eMMC (1) by external hw signal */
-	int soft_select = 82;	/* gpio to select uSD (1) or eMMC (0) */
-	int control = 76;	/* control between SW (1) and HW (0) select */
+	int hard_select = 0;	/* gpio to select uSD (0) or eMMC (1) by external hw signal */
+	int soft_select = 0;	/* gpio to select uSD (1) or eMMC (0) */
+	int control = 0;	/* control between SW (1) and HW (0) select */
 
 	int val;	/* is the value of soft_select gpio after processing */
 
@@ -205,18 +205,25 @@ int board_mmc_init(bd_t *bis)
 #if 1
 	printf("board_mmc_init for LC15 %d called\n", vers);
 #endif
-	if (vers <= 49) {
-		 /* has no working mmc switch! */
-		soft_select = 0;
-		hard_select = 0;
-		control = 0;
-	}
+	if (vers >= 51) {
+		hard_select = 7;
+		soft_select = 82;
+		control = 76;
 
-	if (vers == 50) {
+	} else if (vers == 50) {
 		/* board revision 5.0 shares the revision gpios with mmc_switch control */
+		hard_select = 7;
 		soft_select = 32;
 		control = 33;
+
+	} else {
+		/* has no working mmc switch! */
 	}
+
+	/* fix pinconf for shoulder buttons */
+	__raw_writew( 0x11e, 0x4a002906 );
+	__raw_writew( 0x11e, 0x4a002908 );
+	__raw_writew( 0x11e, 0x4a002932 );
 
 	gpio_request(hard_select, "bootsel");		/* BOOTSEL button */
 	gpio_request(soft_select, "mmc-select");	/* chooses uSD and not eMMC */
