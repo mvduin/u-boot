@@ -416,7 +416,7 @@ static void debug_omap5_ddr3_leveling(struct emif_reg_struct *emif)
 	wl = s.err.wrlvl_fail;
 	gl = s.err.gatelvl_fail;
 	if( rl || wl || gl ) {
-		debug(  "\e[1;31mleveling errors\e[m:   " );
+		debug(  "leveling errors:   " );
 		for( i = 0; i < 4; i++ ) {
 			debug( " %c%c%c",
 					(rl & 1) ? 'r' : '-',
@@ -430,7 +430,7 @@ static void debug_omap5_ddr3_leveling(struct emif_reg_struct *emif)
 	}
 	gl = s.err.fifo_we_misalign;
 	if( gl ) {
-		debug(  "\e[1;31mfifo misalignment\e[m: ");
+		debug(  "fifo misalignment: ");
 		for( i = 0; i < 4; i++ ) {
 			debug( " %3s", (gl & 1) ? "yes" : " - " );
 			gl >>= 1;
@@ -439,7 +439,7 @@ static void debug_omap5_ddr3_leveling(struct emif_reg_struct *emif)
 	}
 	if( s.err.fifo_rst_d0 || s.err.fifo_rst_d1
 			|| s.err.fifo_rst_d2 || s.err.fifo_rst_d3 ) {
-		debug(  "\e[1;31mfifo rst errors\e[m:    %3d %3d %3d %3d\n",
+		debug(  "fifo rst errors:    %3d %3d %3d %3d\n",
 			s.err.fifo_rst_d0,
 			s.err.fifo_rst_d1,
 			s.err.fifo_rst_d2,
