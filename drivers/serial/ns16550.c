@@ -130,9 +130,14 @@ static int ns16550_readb(NS16550_t port, int offset)
 		(unsigned char *)addr - (unsigned char *)com_port)
 #endif
 
+#if defined(CONFIG_NS16550_OMAP) || defined(CONFIG_NS16550_C6X)
+#  define SAMPLES 13
+#else
+#  define SAMPLES 16
+#endif
 int ns16550_calc_divisor(NS16550_t port, int clock, int baudrate)
 {
-	const unsigned int mode_x_div = 16;
+	const unsigned int mode_x_div = SAMPLES;
 
 	return DIV_ROUND_CLOSEST(clock, mode_x_div * baudrate);
 }
@@ -205,7 +210,7 @@ void NS16550_init(NS16550_t com_port, int baud_divisor)
 	serial_out(UART_FCRVAL, &com_port->fcr);
 
 	/* enable uart, with workaround for erratum i202 */
-	serial_out(0, &com_port->mdr1);
+	serial_out(SAMPLES == 13 ? 3 : 0, &com_port->mdr1);
 	__udelay(1);
 	serial_out(UART_FCRVAL, &com_port->fcr);
 	serial_out(UART_MCRVAL, &com_port->mcr);
@@ -226,7 +231,8 @@ void NS16550_init(NS16550_t com_port, int baud_divisor)
 		NS16550_setbrg(com_port, baud_divisor);
 #ifdef CONFIG_NS16550_C6X
 	/* /16 is proper to hit 115200 with 48MHz */
-	serial_out(0, &com_port->mdr1);
+	/* /13 is proper to hit 115200*{1,2,4,8,16,32} with 48MHz */
+	serial_out(1, &com_port->mdr1);
 	serial_out(UART_REG_VAL_PWREMU_MGMT_UART_ENABLE, &com_port->pwr_mgmt);
 #endif
 	serial_out(CONFIG_SYS_NS16550_IER, &com_port->ier);
