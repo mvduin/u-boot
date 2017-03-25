@@ -25,7 +25,6 @@
 #define CONFIG_CONS_INDEX		3
 #define CONSOLEDEV			"ttyO2"
 #define CONFIG_SYS_NS16550_COM3		UART3_BASE
-#define CONFIG_BAUDRATE			115200
 
 #ifndef CONFIG_SPL_BUILD
 /* Define the default GPT table for eMMC */
