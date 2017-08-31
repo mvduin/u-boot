@@ -64,6 +64,33 @@ void set_muxconf_regs(void)
 		   sizeof(struct pad_conf_entry));
 }
 
+// smps voltage, range 0, steps of 0.01V
+// 50 - 165 = 0.50 V - 1.65 V
+#define SMPS_VOLT(x) ((x) - 50 + 6)
+
+#ifdef CONFIG_DUAL_RANK_DDR3
+void vcores_init(void)
+{
+	int err;
+
+	if (running_from_sdram() || warm_reset())
+		return;
+
+	u8 cval = SMPS_MODE_SLP_FPWM | SMPS_MODE_ACT_FPWM | SMPS_PERSIST;
+	u8 vval = SMPS_VOLT( 150 );
+
+	err = palmas_write_u8(SMPS6_VOLTAGE, vval);
+	if (err)
+		printf("error setting SMPS6_VOLTAGE: %d\n", err);
+
+	err = palmas_write_u8(SMPS6_CTRL, cval);
+	if (err)
+		printf("error setting SMPS6_CTRL: %d\n", err);
+
+	__udelay(3000);
+}
+#endif
+
 /* U-Boot only code */
 #if !defined(CONFIG_SPL_BUILD)
 
