@@ -693,7 +693,14 @@ static void omap5_ddr3_init(u32 base, const struct emif_regs *regs)
 	 * defined, contents of mode Registers must be fully initialized.
 	 * H/W takes care of this initialization
 	 */
-	writel(regs->emif_ddr_phy_ctlr_1_init, &emif->emif_ddr_phy_ctrl_1);
+	u32 emif_ddr_phy_ctrl_1 = regs->emif_ddr_phy_ctlr_1_init;
+	if (!emif_ddr_phy_ctrl_1) {
+		emif_ddr_phy_ctrl_1 = regs->emif_ddr_phy_ctlr_1;
+		// XXX why does "invert clkout" need to remain cleared until
+		// later?  leveling completely borks otherwise
+		emif_ddr_phy_ctrl_1 &= ~(1 << 18);
+	}
+	writel(emif_ddr_phy_ctrl_1, &emif->emif_ddr_phy_ctrl_1);
 
 	/* Update timing registers */
 	writel(regs->sdram_tim1, &emif->emif_sdram_tim_1);
