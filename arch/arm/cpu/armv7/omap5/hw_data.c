@@ -670,8 +670,30 @@ const struct ctrl_ioregs ioregs_omap5432_es2 = {
 	.ctrl_ddrio_0 = DDR_IO_0_VREF_CELLS_DDR3_VALUE_ES2,
 	.ctrl_ddrio_1 = DDR_IO_1_VREF_CELLS_DDR3_VALUE_ES2,
 	.ctrl_ddrio_2 = DDR_IO_2_VREF_CELLS_DDR3_VALUE_ES2,
-	.ctrl_emif_sdram_config_ext = SDRAM_CONFIG_EXT_RD_LVL_11_SAMPLES,
-	.ctrl_emif_sdram_config_ext_final = SDRAM_CONFIG_EXT_RD_LVL_4_SAMPLES,
+	.ctrl_emif_sdram_config_ext = 0
+		| 7	<<  0	// enable command phys: 3=ddr3, 7=all
+		| false	<<  3	// invert clock
+		| 1	<<  5	// local ODT for reads: 0=off 1=60Ω 2=80Ω 3=120Ω
+		| true	<<  7	// block ddr3 reset assertion
+		| true	<<  8	// power down receivers when possible
+		// write leveling:
+		| false	<< 12	// ram sends response on all dqs
+		// read leveling:
+		| 0	<< 13	// algorithm: 0=recommended
+		| 3	<< 14	// num of samples: 0=4, 1=8, 2=16, 3=128
+		,
+	.ctrl_emif_sdram_config_ext_final = 0
+		| 7	<<  0	// enable command phys: 3=ddr3, 7=all
+		| false	<<  3	// invert clock
+		| 1	<<  5	// local ODT for reads: 0=off 1=60Ω 2=80Ω 3=120Ω
+		| true	<<  7	// block ddr3 reset assertion
+		| true	<<  8	// power down receivers when possible
+		// write leveling:
+		| false	<< 12	// ram sends response on all dqs
+		// read leveling:
+		| 0	<< 13	// algorithm: 0=recommended
+		| 0	<< 14	// num of samples: 0=4, 1=8, 2=16, 3=128
+		,
 };
 
 const struct ctrl_ioregs ioregs_dra7xx_es1 = {
