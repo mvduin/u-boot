@@ -674,7 +674,7 @@ const struct ctrl_ioregs ioregs_omap5432_es2 = {
 		| 7	<<  0	// enable command phys: 3=ddr3, 7=all
 		| false	<<  3	// invert clock
 		| 3	<<  5	// local ODT for reads: 0=off 1=60Ω 2=80Ω 3=120Ω
-		| true	<<  7	// block ddr3 reset assertion
+		| false	<<  7	// block ddr3 reset assertion
 		| true	<<  8	// power down receivers when possible
 		// write leveling:
 		| false	<< 12	// ram sends response on all dqs
