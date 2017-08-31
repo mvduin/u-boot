@@ -139,8 +139,8 @@ const struct emif_regs emif_regs_ddr3_532_mhz_1cs_es2 = {
 };
 
 const struct emif_regs emif_regs_ddr3_532_mhz_2cs_es2 = {
-	.sdram_config_init              = 0x61851B3A,
-	.sdram_config                   = 0x61851B3A,
+	.sdram_config_init              = 0x62851B3A,
+	.sdram_config                   = 0x62851B3A,
 	.sdram_config2			= 0x0,
 	.ref_ctrl                       = 0x000040F1,  // 31.25 μs
 	.ref_ctrl_final			= 0x00001035,  // 7.8 μs

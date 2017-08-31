@@ -666,14 +666,14 @@ const struct ctrl_ioregs ioregs_omap5432_es1 = {
 const struct ctrl_ioregs ioregs_omap5432_es2 = {
 	.ctrl_ddrch = DDR_IO_I_40OHM_SR_FAST_WD_DQ_NO_PULL_DQS_NO_PULL_ES2,
 	.ctrl_lpddr2ch = 0x0,
-	.ctrl_ddr3ch = DDR_IO_I_40OHM_SR_SLOWEST_WD_DQ_NO_PULL_DQS_NO_PULL_ES2,
+	.ctrl_ddr3ch = DDR_IO_I_40OHM_SR_FAST_WD_DQ_NO_PULL_DQS_NO_PULL_ES2,
 	.ctrl_ddrio_0 = DDR_IO_0_VREF_CELLS_DDR3_VALUE_ES2,
 	.ctrl_ddrio_1 = DDR_IO_1_VREF_CELLS_DDR3_VALUE_ES2,
 	.ctrl_ddrio_2 = DDR_IO_2_VREF_CELLS_DDR3_VALUE_ES2,
 	.ctrl_emif_sdram_config_ext = 0
 		| 7	<<  0	// enable command phys: 3=ddr3, 7=all
 		| false	<<  3	// invert clock
-		| 1	<<  5	// local ODT for reads: 0=off 1=60Ω 2=80Ω 3=120Ω
+		| 3	<<  5	// local ODT for reads: 0=off 1=60Ω 2=80Ω 3=120Ω
 		| true	<<  7	// block ddr3 reset assertion
 		| true	<<  8	// power down receivers when possible
 		// write leveling:
@@ -685,7 +685,7 @@ const struct ctrl_ioregs ioregs_omap5432_es2 = {
 	.ctrl_emif_sdram_config_ext_final = 0
 		| 7	<<  0	// enable command phys: 3=ddr3, 7=all
 		| false	<<  3	// invert clock
-		| 1	<<  5	// local ODT for reads: 0=off 1=60Ω 2=80Ω 3=120Ω
+		| 3	<<  5	// local ODT for reads: 0=off 1=60Ω 2=80Ω 3=120Ω
 		| true	<<  7	// block ddr3 reset assertion
 		| true	<<  8	// power down receivers when possible
 		// write leveling:
