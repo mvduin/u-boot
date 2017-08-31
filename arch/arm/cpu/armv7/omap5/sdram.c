@@ -136,17 +136,85 @@ const struct emif_regs emif_regs_ddr3_532_mhz_1cs_es2 = {
 };
 
 const struct emif_regs emif_regs_ddr3_532_mhz_2cs_es2 = {
-	.sdram_config                   = 0x62851B3A,
-	.sdram_config2			= 0x0,
-	.ref_ctrl                       = 0x000040F1,  // 31.25 μs
-	.ref_ctrl_final			= 0x00001035,  // 7.8 μs
-	.sdram_tim1                     = 0xCCCF36B3,
-	.sdram_tim2                     = 0x308F7FDA,
-	.sdram_tim3                     = 0x027F88A8,
-	.read_idle_ctrl                 = 0x00050000,
-	.zq_config                      = 0xD007190B,
-	.temp_alert_config              = 0x00000000,
-	.emif_ddr_phy_ctlr_1            = 0x0034400A,//| EMIF_DDR_PHY_CTRL_1_RDLVL_MASK_MASK,
+	.sdram_config                   = 0
+		| (   3 /* ram type = DDR3 */ ) << 29
+		| (   1 /* differential dqs */ ) << 23
+
+		| (   1 /* ram driver: 0=34, 1=40 Ω */ ) << 18
+
+		/* ram on-die termination */
+		| (   2 /* nom: 0=off 1=60 2=120 3=40 4=20 5=30 Ω */ ) << 24
+		| (   0 /* dyn: 0=nom 1=60 2=120 Ω */ ) << 21
+
+		| (  10 /* column bits */	- 8 ) <<  0
+		| (   1 /* rank bits */		    ) <<  3
+		| (   3 /* bank bits */		    ) <<  4
+		| (  15 /* row bits */		- 9 ) <<  7
+		| (   0 /* bus width: 0=32-bit, 1=16-bit */ ) << 14
+
+		| (   0 /* bank bits non-interleaved */ ) << 27
+
+		| (   7 /* cas latency */	- 4 ) << 11
+		| (   6 /* cas write latency */	- 5 ) << 16
+		,
+	.sdram_config2			= 0
+		| (   0 /* rank bits non-interleaved */ ) << 27
+		,
+	.ref_ctrl                       = 0x000040F1,  // 31.25 μs * 532 MHz
+	.ref_ctrl_final			= 0x00001035,  // 7.8 μs * 532 MHz
+	.sdram_tim1                     = 0
+		| (   4 /* tWTR */		- 1 ) <<  0
+		| (   7 /* tRRD = tFAW / 4 */	- 1 ) <<  3
+		| (  27 /* tRC */		- 1 ) <<  6
+		| (  20 /* tRAS(min) */		- 1 ) << 12
+		| (   8 /* tWR */		- 1 ) << 17
+		| (   7 /* tRCD */		- 1 ) << 21
+		| (   7 /* tRP */		- 1 ) << 25
+		| (   7 /* tRTW */		- 1 ) << 29
+		,
+	.sdram_tim2                     = 0
+		| (   3 /* tCKE */		- 1 ) <<  0
+		| (   4 /* tRTP */		- 1 ) <<  3
+		| ( 512 /* tXSRD = tXSDLL */	- 1 ) <<  6
+		| ( 144 /* tXSNR = tXS */	- 1 ) << 16
+		| (   0 /* tODT = tAONPD */	    ) << 25
+		| (   4 /* tXP */		- 1 ) << 28
+		,
+	.sdram_tim3                     = 0
+		| (   9 /* tRAS(max) / tREFI */	- 1 ) <<  0
+		| ( 139 /* tRFC */		- 1 ) <<  4
+		| (  64 /* tZQCS */		- 1 ) << 15
+		| (   4 /* tCKESR */		- 1 ) << 21
+		| (   3 /* tCSTA */		- 1 ) << 24
+		| (   0 /* tPDLL_UL / 128 */	    ) << 28
+		,
+	.read_idle_ctrl                 = 0
+		| (   0 /* dll calib interval */    ) <<  0
+		| (   5 /* ack wait */	    	    ) << 16
+		,
+	.zq_config                      = 0
+		| (6411 /* tZQCSI / tREFI */	    ) <<  0
+		| (   4 /* tZQCL / tZQCS */	- 1 ) << 16
+		| (   2 /* tZQINIT / tZQCL */	- 1 ) << 18
+		| false /* ZQCL on pd exit */	      << 27
+		| true  /* ZQCL on sr exit */	      << 28
+		| false /* dual calibration */	      << 29
+		| true  /* rank 0 calib enabled */    << 30
+		| true  /* rank 1 calib enabled */    << 31
+		,
+	.emif_ddr_phy_ctlr_1            = 0
+		| (  11 /* "read latency" */    - 1 ) <<  0
+		| false /* fast dll lock */	      <<  9
+		| (  16 /* max dll lock diff */	    ) << 10
+		| true  /* invert clkout */	      << 18
+		| false /* disable phy calib rst */   << 19
+		| true  /* ... see TRM */	      << 20
+		| true  /* div /2 for master dll */   << 21
+		| false /* mask write leveling */     << 25
+		| false /* mask dqs gate training */  << 26
+		| false /* mask read eye training */  << 27
+		,
+
 	.emif_ddr_ext_phy_ctrl_1        = 0x04040100,
 
 	// fifo we (read gate)
