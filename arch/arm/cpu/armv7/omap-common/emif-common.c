@@ -683,7 +683,8 @@ static void omap5_ddr3_init(u32 base, const struct emif_regs *regs)
 {
 	struct emif_reg_struct *emif = (struct emif_reg_struct *)base;
 
-	writel(regs->ref_ctrl, &emif->emif_sdram_ref_ctrl);
+	writel(regs->ref_ctrl | EMIF_REG_INITREF_DIS_MASK,
+	       &emif->emif_sdram_ref_ctrl);
 	writel(regs->sdram_config_init, &emif->emif_sdram_config);
 	/*
 	 * Set SDRAM_CONFIG and PHY control registers to locked frequency
@@ -699,6 +700,8 @@ static void omap5_ddr3_init(u32 base, const struct emif_regs *regs)
 	writel(regs->sdram_tim3, &emif->emif_sdram_tim_3);
 
 	writel(regs->read_idle_ctrl, &emif->emif_read_idlectrl);
+
+	writel(regs->ref_ctrl, &emif->emif_sdram_ref_ctrl);
 
 	writel(regs->sdram_config2, &emif->emif_lpddr2_nvm_config);
 	writel(regs->sdram_config_init, &emif->emif_sdram_config);
