@@ -682,10 +682,11 @@ static void dra7_ddr3_init(u32 base, const struct emif_regs *regs)
 static void omap5_ddr3_init(u32 base, const struct emif_regs *regs)
 {
 	struct emif_reg_struct *emif = (struct emif_reg_struct *)base;
+	u32 sdram_config = regs->sdram_config_init ?: regs->sdram_config;
 
 	writel(regs->ref_ctrl | EMIF_REG_INITREF_DIS_MASK,
 	       &emif->emif_sdram_ref_ctrl);
-	writel(regs->sdram_config_init, &emif->emif_sdram_config);
+	writel(sdram_config, &emif->emif_sdram_config);
 	/*
 	 * Set SDRAM_CONFIG and PHY control registers to locked frequency
 	 * and RL =7. As the default values of the Mode Registers are not
@@ -704,7 +705,7 @@ static void omap5_ddr3_init(u32 base, const struct emif_regs *regs)
 	writel(regs->ref_ctrl, &emif->emif_sdram_ref_ctrl);
 
 	writel(regs->sdram_config2, &emif->emif_lpddr2_nvm_config);
-	writel(regs->sdram_config_init, &emif->emif_sdram_config);
+	writel(sdram_config, &emif->emif_sdram_config);
 	do_ext_phy_settings(base, regs);
 
 	__udelay(1000);
