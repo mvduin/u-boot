@@ -74,14 +74,31 @@
 /* Request bypass, LDO9 only */
 #define LDO9_BYPASS		(LDO_VOLT_3V3 | LDO9_BYP_EN)
 
-/* SMPS7_CTRL */
-#define SMPS7_CTRL		0x30
+/* SMPS123 control/voltage */
+#define SMPS123_CTRL		0x20
+#define SMPS123_VOLTAGE		0x23
 
-/* SMPS9_CTRL */
+/* SMPS45 control/voltage */
+#define SMPS45_CTRL		0x28
+#define SMPS45_VOLTAGE		0x2b
+
+/* SMPS6 control/voltage */
+#define SMPS6_CTRL		0x2c
+#define SMPS6_VOLTAGE		0x2f
+
+/* SMPS7 control/voltage */
+#define SMPS7_CTRL		0x30
+#define SMPS7_VOLTAGE		0x33
+
+/* SMPS8 control/voltage */
+#define SMPS8_CTRL		0x34
+#define SMPS8_VOLTAGE		0x37
+
+/* SMPS9 control/voltage */
 #define SMPS9_CTRL		0x38
 #define SMPS9_VOLTAGE		0x3b
 
-/* SMPS10_CTRL */
+/* SMPS10 control */
 #define SMPS10_CTRL		0x3c
 #define SMPS10_MODE_ACTIVE_D	0x0d
 
@@ -92,6 +109,7 @@
 #define SMPS_MODE_SLP_AUTO	(1 << 2)
 #define SMPS_MODE_SLP_ECO	(2 << 2)
 #define SMPS_MODE_SLP_FPWM	(3 << 2)
+#define SMPS_PERSIST		(1 << 7)	/* warm-reset insensitive */
 
 /*
  * Some popular SMPS voltages, all with RANGE=1; note
