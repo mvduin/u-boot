@@ -185,7 +185,7 @@ void emif_update_timings(u32 base, const struct emif_regs *regs)
 {
 	struct emif_reg_struct *emif = (struct emif_reg_struct *)base;
 
-	if (!is_dra7xx())
+	if (!regs->ref_ctrl_final)
 		writel(regs->ref_ctrl, &emif->emif_sdram_ref_ctrl_shdw);
 	else
 		writel(regs->ref_ctrl_final, &emif->emif_sdram_ref_ctrl_shdw);
@@ -706,6 +706,11 @@ static void omap5_ddr3_init(u32 base, const struct emif_regs *regs)
 	writel(regs->sdram_config2, &emif->emif_lpddr2_nvm_config);
 	writel(regs->sdram_config_init, &emif->emif_sdram_config);
 	do_ext_phy_settings(base, regs);
+
+	__udelay(1000);
+
+	if (regs->ref_ctrl_final)
+		writel(regs->ref_ctrl_final, &emif->emif_sdram_ref_ctrl);
 
 	writel(regs->emif_rd_wr_lvl_rmp_ctl, &emif->emif_rd_wr_lvl_rmp_ctl);
 	omap5_ddr3_leveling(base, regs);
